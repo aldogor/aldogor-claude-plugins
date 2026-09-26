@@ -50,4 +50,4 @@ A project keeps a `JOURNAL.md` of dated entries whose last "Open as of" list is 
 
 ## Provenance and licence
 
-MIT licence. The skills are maintained in the author's private configuration repository and published here. Ideas adapted from other packages are listed, with source, commit and licence, in [UPSTREAM.md](UPSTREAM.md).
+MIT licence. The skills are maintained in the author's private configuration repository and published here. Ideas adapted from other packages are listed, with source, commit and licence, in [UPSTREAM.md](UPSTREAM.md); where a source carries a noncommercial licence (academic-research-skills, CC BY-NC 4.0), only workflow ideas were taken and re-authored, with no text copied.
