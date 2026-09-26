@@ -34,6 +34,39 @@ Lo stesso registro regge la nota, email o documento, in cui l'utente porta a un 
 - Nessuna valutazione sul lavoro della controparte, né lodi né critiche ("nel complesso il lavoro mi sembra ben impostato" è un errore di registro).
 - Correzioni e richieste voce per voce, riferite alla posizione nel preventivo/documento.
 
+## Esempi dell'utente
+
+(email scritte dall'utente, anonimizzate: nomi, enti e date sono sostituiti. Da imitare la costruzione, non le parole.)
+
+Risposta a un ufficio del personale:
+
+> Gentilissima,
+>
+> sarà mia cura inviare il modulo appena possibile. Per quanto riguarda la data di conseguimento dovrebbe, a meno di modifiche dell'ultimo minuto, essere il 15 dicembre.
+>
+> Cordiali saluti
+
+Richiesta alla professoressa che coordina un gruppo di lavoro:
+
+> Gentilissima Prof.ssa Rossi,
+>
+> Le scrivo, anche a nome di tutto il gruppo di lavoro, per avere un aggiornamento in merito alla proposta di workshop. Vorremmo chiederle se ci sono state conferme da parte della giunta e se fosse disponibile un documento definitivo dal quale poter iniziare a lavorare.
+>
+> La ringraziamo per l'attenzione e restiamo a disposizione.
+>
+> Cordiali saluti,
+
+Risposta a un collega, in uno scambio già avviato:
+
+> Ciao Marco,
+>
+> grazie mille innanzitutto dell'aggiornamento. In risposta alle tue due richieste:
+>
+> - Per quanto riguarda il documento, dal punto di vista dei contenuti, secondo me è solido e c'è poco altro da dire (a meno di non voler citare le linee guida più recenti). L'unico appunto che si potrebbe fare è che manca un obiettivo chiaro e definito, un'idea di progetto. Ma mi sembra di capire che questo non sia necessariamente richiesto in questa fase.
+> - Riguardo ai nomi ho poco da aggiungere, quelli ovvi li hai già citati, e in entrambi i casi non ho conoscenze dirette. Sono abbastanza sicuro che una collega di un altro dipartimento potrebbe essere interessata all'argomento, che però per l'appunto non è il suo main topic.
+>
+> A presto.
+
 ## Pattern appresi dalle correzioni dell'utente
 
 (dal corpus chat 2024-2026, seed 2026-08-05; aldogor-style-learn aggiunge qui.)
