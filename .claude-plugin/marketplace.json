@@ -1,0 +1,9 @@
+{
+  "name": "aldogor-claude-plugins",
+  "owner": { "name": "Aldo Gorga" },
+  "description": "Claude plugins for public health research: grounded research and citation checks, structure and prose review, session handoff, project setup and sharing",
+  "plugins": [
+    { "name": "aldogor-core", "source": "./plugins/aldogor-core", "description": "Skills for Claude Code and claude.ai: research and citation verification, structure and prose review, session handoff, grilling and questionnaires" },
+    { "name": "aldogor-code", "source": "./plugins/aldogor-code", "description": "Claude Code only: project setup and tidying, preparing a repository for collaborators, a counsel agent on Fable" }
+  ]
+}
