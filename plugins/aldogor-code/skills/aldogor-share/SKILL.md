@@ -1,8 +1,7 @@
 ---
 name: aldogor-share
 description: >-
-  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (AGENTS.md with the project's conventions, CLAUDE.md importing it, .claude/settings.json installing the shared plugins). Run by the user ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators").
-disable-model-invocation: true
+  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (AGENTS.md with the project's conventions, CLAUDE.md importing it, .claude/settings.json installing the shared plugins). Use when the user asks to share a repository ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators"), before collaborators are invited, and before a repository is made public or pushed to a public remote.
 ---
 
 # Aldogor-share
