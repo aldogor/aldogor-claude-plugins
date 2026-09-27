@@ -55,6 +55,6 @@ Three to five lines, written once the steps above are done:
 
 1. What to read first, by name or path: the state document and, if needed, one or two authoritative files; in a project with a journal, its last "Open as of" (or "Aperto al") section and the canonical document.
 2. Where the work stands, in one sentence.
-3. The next task with its reason, taken from the priority the user gave in step 1: "I'm working on [larger goal]. The next step is [task] because [what it enables]."
+3. The next task with its reason, taken from the priority the user gave in step 1: "I'm working on [larger goal]. The next step is [task] because [what it enables]." Then the rest of the journal's open list, which the next session works through until each item is closed or waits on something outside it.
 
 If the prompt needs more than five lines, the missing content belongs in the state documents.
