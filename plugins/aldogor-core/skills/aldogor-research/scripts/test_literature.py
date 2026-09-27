@@ -2,6 +2,7 @@
 
 Run with: python -m pytest <this folder>
 """
+import argparse
 import os
 import sys
 
@@ -297,10 +298,11 @@ def test_abstract_from_markdown_only_for_full_text():
 def test_check_problems_on_a_small_library(tmp_path):
     rows = [{c: '' for c in lit.COLUMNS} for _ in range(2)]
     rows[0].update(key='a2020x', authors='A', full_text='yes', pdf='a2020x.pdf', md='a2020x.md', doi='10.1/a')
-    rows[1].update(key='b2020y', authors='B', full_text='yes', doi='10.1/a')     # duplicate DOI, no full text
+    rows[1].update(key='b2020y', authors='B', full_text='yes', md='b2020y.md', doi='10.1/a')   # duplicate DOI, abstract only
     lit.write_rows(rows, lit.COLUMNS, str(tmp_path / 'bibliography.csv'))
     (tmp_path / 'a2020x.pdf').write_bytes(b'%PDF-')
     (tmp_path / 'a2020x.md').write_text('---\nkey: a2020x\ntext_source: "full text, PDF (x)"\n---\n# A\n', encoding='utf-8')
+    (tmp_path / 'b2020y.md').write_text('---\nkey: b2020y\ntext_source: "abstract only (full text not retrieved)"\n---\n# B\n', encoding='utf-8')
     (tmp_path / 'stray.txt').write_text('x')
     (tmp_path / 'pdf').mkdir()
     problems, _ = lit.check_problems(str(tmp_path))
@@ -310,6 +312,72 @@ def test_check_problems_on_a_small_library(tmp_path):
     assert 'file not described by any row of the CSV: stray.txt' in text
     assert 'subfolder not described by any row of the CSV: pdf' in text
     assert not any(p.startswith('a2020x') for p in problems)
+
+
+# ---------------------------------------------------------------- a fresh clone: the CSV without its files
+# A collaborator's clone receives bibliography.csv as the owner's machine wrote it: every row says
+# full_text=yes and names its PDF and Markdown, and none of those files is present.
+JATS = (b'<article><front><article-meta><abstract><p>About alpha.</p></abstract></article-meta></front>'
+        b'<body><sec><title>Methods</title><p>We did it.</p></sec></body></article>')
+
+
+def fresh_clone(tmp_path):
+    rows = [{c: '' for c in lit.COLUMNS} for _ in range(3)]
+    rows[0].update(key='A_2020', authors='A', year='2020', title='Alpha', doi='10.1/a', full_text='yes', access='open',
+                   pdf='A_2020.pdf', md='A_2020.md', text_type='abstract', abstract_or_summary='About alpha.')
+    rows[1].update(key='B_2021', authors='B', year='2021', title='Beta', doi='10.1/b', full_text='yes', access='open',
+                   pdf='B_2021.pdf', md='B_2021.md', text_type='abstract', abstract_or_summary='About beta.')
+    rows[2].update(key='C_2022', authors='C', year='2022', title='Gamma report', full_text='yes',   # no DOI: a report
+                   pdf='C_2022.pdf', md='C_2022.md')
+    lit.write_rows(rows, lit.COLUMNS, str(tmp_path / lit.CSV_NAME))
+
+
+def fake_retrieve(called, open_access=('A_2020',)):
+    """A stand-in for retrieve(): records the keys it is asked for; the works in open_access come back with
+    their JATS full text, the others with nothing."""
+    def retrieve(doi, key, title, family, rec):
+        called.append(key)
+        if key in open_access:
+            rec.update(jats=JATS, xml='europepmc')
+        return rec
+    return retrieve
+
+
+def test_fetch_in_a_fresh_clone_retrieves_every_work_with_a_doi(tmp_path, monkeypatch):
+    fresh_clone(tmp_path)
+    monkeypatch.setattr(lit, 'LIT', str(tmp_path))
+    called = []
+    monkeypatch.setattr(lit, 'retrieve', fake_retrieve(called))
+    lit.cmd_fetch(argparse.Namespace(keys=[]))
+    assert called == ['A_2020', 'B_2021']                   # the full_text column said yes for both
+    by = {r['key']: r for r in lit.read_rows(str(tmp_path / lit.CSV_NAME))[1]}
+    # an open-access copy: its Markdown from the JATS XML, full_text yes, no PDF named
+    assert (by['A_2020']['full_text'], by['A_2020']['pdf'], by['A_2020']['md']) == ('yes', '', 'A_2020.md')
+    assert lit.header_value((tmp_path / 'A_2020.md').read_text(encoding='utf-8'), 'text_source').startswith('full text, JATS XML')
+    # no free copy: the Markdown holds the abstract, and the row no longer claims a full text
+    assert (by['B_2021']['full_text'], by['B_2021']['pdf'], by['B_2021']['md']) == ('no', '', 'B_2021.md')
+    assert lit.header_value((tmp_path / 'B_2021.md').read_text(encoding='utf-8'), 'text_source') == 'abstract only (full text not retrieved)'
+    # what is left is the report without a DOI, for collect
+    problems, _ = lit.check_problems(str(tmp_path))
+    assert len(problems) == 1 and problems[0].startswith('no local files for C_2022:') and 'collect' in problems[0]
+
+
+def test_fetch_decides_from_the_files_not_the_full_text_column(tmp_path, monkeypatch, capsys):
+    fresh_clone(tmp_path)
+    (tmp_path / 'B_2021.pdf').write_bytes(b'%PDF-')          # this work's full text is here
+    monkeypatch.setattr(lit, 'LIT', str(tmp_path))
+    called = []
+    monkeypatch.setattr(lit, 'retrieve', fake_retrieve(called))
+    lit.cmd_fetch(argparse.Namespace(keys=['A_2020', 'B_2021']))
+    assert called == ['A_2020']
+    assert 'B_2021: already has its full text' in capsys.readouterr().out
+
+
+def test_check_recognises_a_fresh_clone_in_one_line(tmp_path):
+    fresh_clone(tmp_path)
+    problems, _ = lit.check_problems(str(tmp_path))
+    assert len(problems) == 1
+    assert 'fresh clone' in problems[0] and 'fetch' in problems[0] and 'collect' in problems[0]
 
 
 # ---------------------------------------------------------------- Surname_Year keys and the key form

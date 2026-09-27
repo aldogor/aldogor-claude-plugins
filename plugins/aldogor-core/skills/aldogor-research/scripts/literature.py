@@ -20,7 +20,8 @@ holding bibliography.csv, found from the working directory up to the repository 
                         add a work: metadata from Crossref, abstract, legal open-access full text,
                         Markdown, new row in the CSV. In a project without a library, the first add creates
                         literature/ at the repository root and the .gitignore lines that keep its files local
-    fetch [KEY ...]     try the legal open-access sources again for works still without full text
+    fetch [KEY ...]     try the legal open-access sources again for works whose full text is not in the
+                        folder (in a fresh clone, every work with a DOI)
     collect [--from DIR]
                         file the PDFs downloaded by hand (default: the Downloads folder) under their keys
     md [KEY ...] [--force]
@@ -1099,6 +1100,17 @@ def summary_body(row):
 IRREPLACEABLE = ('full text, JATS XML', 'full text, article web page')
 
 
+def full_text_here(key, lit=None):
+    """True if the library folder holds the full text of a work: <key>.pdf, or a <key>.md whose header says
+    it holds the full text (one made from JATS XML or a web page has no PDF). Decided from the files, never
+    from the full_text column: a fresh clone receives the CSV as the owner's machine wrote it, without the files."""
+    lit = lit or LIT
+    if os.path.exists(os.path.join(lit, key + '.pdf')):
+        return True
+    md = os.path.join(lit, key + '.md')
+    return os.path.exists(md) and header_value(read_text(md), 'text_source').startswith('full text')
+
+
 def mark_full_text(row, lit=None):
     """Full text is here: set full_text, access and the pdf column."""
     row['full_text'], row['access'] = 'yes', 'open'
@@ -1127,6 +1139,8 @@ def apply_retrieval(row, rec, note=None):
         mark_full_text(row)
         md_text = read_text(os.path.join(LIT, key + '.md'))
     else:
+        # no full text here: a row copied from another machine (a fresh clone) may still say yes and name a PDF
+        row['full_text'], row['pdf'] = 'no', ''
         oa = rec.get('oa_status')
         if oa:
             row['access'] = 'open, host blocks download' if oa in OPEN else 'closed'
@@ -1196,21 +1210,23 @@ def cmd_add(args):
 
 # ====================================================================== fetch
 def cmd_fetch(args):
-    """Retry the open-access sources for works without full text (all of them, or the keys given)."""
+    """Retry the open-access sources for works whose full text is not in the folder (all of them, or the
+    keys given). The folder decides, not the full_text column, so that in a fresh clone, which has the CSV
+    and none of the files, fetch downloads the open-access copies again and writes their Markdown."""
     fields, rows = read_rows()
     by_key = {r['key']: r for r in rows}
     unknown = [k for k in args.keys if k not in by_key]
     if unknown:
         sys.exit('unknown keys: ' + ', '.join(unknown))
     targets = [by_key[k] for k in args.keys] if args.keys else \
-        [r for r in rows if r['doi'] and r['full_text'] != 'yes']
+        [r for r in rows if r['doi'] and not full_text_here(r['key'])]
     found = []
     for i, row in enumerate(targets, 1):
         key = row['key']
         if not row['doi']:
             print(f'{key}: no DOI, nothing to search')
             continue
-        if row['full_text'] == 'yes':
+        if full_text_here(key):
             print(f'{key}: already has its full text')
             continue
         rec = retrieve(row['doi'], key, row['title'], first_family(row), new_record())
@@ -1379,14 +1395,22 @@ def check_problems(lit=None):
         problems += [f'duplicate {col}: {v} ({n} rows)' for v, n in sorted(seen.items()) if n > 1]
     names = set(os.listdir(lit))
     described = {CSV_NAME}
+    # Rows that name files (or claim a full text) of which none is here, as every row of a fresh clone,
+    # which receives the CSV without the files: one line with the remedy instead of a line per missing file.
+    claiming, fileless = 0, []
     for r in rows:
         key = r.get('key') or ''
+        claims = bool(r.get('pdf') or r.get('md') or r.get('full_text') == 'yes')
+        restore = claims and key + '.pdf' not in names and key + '.md' not in names
+        claiming += claims
+        if restore:
+            fileless.append(key)
         for col, ext in (('pdf', '.pdf'), ('md', '.md')):
             name, value = key + ext, r.get(col) or ''
             here = name in names
             if value and value != name:
                 problems.append(f'{key}: the {col} column says "{value}", expected "{name}"')
-            elif value and not here:
+            elif value and not here and not restore:
                 problems.append(f'{key}: {value} is named in the CSV but missing from the folder')
             elif here and not value:
                 problems.append(f'{key}: {name} is in the folder but the {col} column is empty')
@@ -1395,12 +1419,17 @@ def check_problems(lit=None):
         md_text = read_text(os.path.join(lit, key + '.md')) if key + '.md' in names else ''
         if md_text and header_value(md_text, 'key') != key:
             problems.append(f'{key}: the header of {key}.md names the key "{header_value(md_text, "key")}"')
-        full = key + '.pdf' in names or header_value(md_text, 'text_source').startswith('full text')
+        full = full_text_here(key, lit)
         if r.get('full_text') not in ('yes', 'no'):
             problems.append(f'{key}: full_text is "{r.get("full_text")}", expected yes or no')
-        elif (r['full_text'] == 'yes') != full:
+        elif (r['full_text'] == 'yes') != full and not restore:
             problems.append(f'{key}: full_text is {r["full_text"]} but the folder holds '
                             + ('a full text' if full else 'no full text'))
+    if fileless:
+        who = ('none of the works has its files here, as in a fresh clone' if len(fileless) == claiming
+               else 'no local files for ' + ', '.join(fileless))
+        problems.append(f'{who}: fetch downloads the legal open-access copies and writes the Markdown, '
+                        'then collect files the copies downloaded in the browser')
     for n in sorted(names - described):
         kind = 'subfolder' if os.path.isdir(os.path.join(lit, n)) else 'file'
         problems.append(f'{kind} not described by any row of the CSV: {n}')
@@ -1558,8 +1587,8 @@ def main(argv=None):
     a.add_argument('--cited-in', default='', help='where the work is cited (cited_in column)')
     a.add_argument('--note', help='a short description, kept as the summary when no abstract is found')
     a.add_argument('--pdf', help='a PDF of the work (copied into the library if its title checks out)')
-    f = sub.add_parser('fetch', help='retry the open-access sources for works without full text')
-    f.add_argument('keys', nargs='*', help='keys to retry (default: every work with a DOI and no full text)')
+    f = sub.add_parser('fetch', help='retry the open-access sources for works whose full text is not in the folder')
+    f.add_argument('keys', nargs='*', help='keys to retry (default: every work with a DOI and no full text in the folder)')
     c = sub.add_parser('collect', help='file the PDFs downloaded by hand')
     c.add_argument('--from', dest='src', default=DOWNLOADS, help='folder to look in (default: %(default)s)')
     m = sub.add_parser('md', help='write <key>.md again')

@@ -13,7 +13,7 @@ In Claude Code, `scripts/literature.py` in this skill's folder manages the folde
 | Command | What it does |
 | --- | --- |
 | `add DOI [--key K] [--cited-in T] [--title T] [--pdf PATH]` | a new row from Crossref (or Europe PMC), the abstract, the legal open-access full text and its Markdown; the first `add` in a project creates the library and its `.gitignore` lines |
-| `fetch [KEY ...]` | tries the open-access sources again for works still without full text |
+| `fetch [KEY ...]` | tries the open-access sources again for the works whose full text is not in the folder, and writes their Markdown |
 | `collect [--from DIR]` | files the PDFs the user downloaded in the browser (default: Downloads), identified by key, DOI or title |
 | `md [KEY ...] [--force]` | rewrites `<key>.md` from the PDF, the abstract or the metadata |
 | `check` | the CSV against the files: missing, extra or misnamed files, duplicate keys or DOIs; exit code 1 on problems |
@@ -22,6 +22,10 @@ In Claude Code, `scripts/literature.py` in this skill's folder manages the folde
 The script fetches only legal free copies (the PMC open-access set, Europe PMC, the open locations OpenAlex and Semantic Scholar list, and a local folder given with `--archive`), never through an institutional login, never from ScienceDirect or Wiley by script, and stops at any anti-bot check; the user downloads those copies in the browser and `collect` files them. A PDF is kept only when the work's title is printed on its first pages.
 
 A source without a DOI (a report, a web page) is a row written by hand: key, authors, year, title, source, kind, url, access. Its PDF placed in the folder as `<key>.pdf` gets its Markdown with `md <key>`.
+
+## A fresh clone
+
+A collaborator's clone holds `bibliography.csv` as the owner's machine wrote it and none of the files, so `check` reports in one line that the works have no local files. `fetch` restores what can legally travel: it reads from the folder, not from the `full_text` column, which works lack their text, downloads their open-access copies, writes each Markdown (the full text where a copy was found, the abstract otherwise) and sets `full_text` and `pdf` to what the folder now holds. The collaborator then downloads the remaining copies in the browser, through their own access, and `collect` files them; a report without a DOI comes back the same way, saved as `<key>.pdf`.
 
 ## Reading and verifying
 
