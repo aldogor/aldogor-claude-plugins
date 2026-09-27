@@ -48,7 +48,7 @@ In a shared project, `.claude/settings.json` can declare the marketplace and the
 
 ## Conventions the skills assume
 
-A project keeps a `JOURNAL.md` of dated entries whose last "Open as of" list is the state of the work; citations are inline (author and year) and link to the DOI; dashes are never used as punctuation; a value with no source is written [n/d]. The skills work without these conventions, but they are written around them.
+A project keeps a `JOURNAL.md` of dated entries that ends with one open list, edited in place, which is the state of the work; citations are inline (author and year) and link to the DOI; dashes are never used as punctuation; a value with no source is written [n/d]. The skills work without these conventions, but they are written around them.
 
 ## Provenance and licence
 

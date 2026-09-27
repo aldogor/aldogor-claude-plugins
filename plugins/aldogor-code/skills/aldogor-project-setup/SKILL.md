@@ -47,7 +47,7 @@ Frozen copies: working documents live in `docs/` without a date in the name; the
 
 ## Development or research?
 
-Ask explicitly: "Is this a development project or a research project?" A research project that also builds software (analysis pipelines, generators, an app attached to the study) takes the development toolkit; research is the default when the answer is unclear. The answer sets two things.
+Ask explicitly: "Is this a development project or a research project?" A research project that also builds software (analysis pipelines, generators, an app attached to the study) takes the development toolkit; research is the default when the answer is unclear. The answer sets the plugins and the journal, described next, and the git practice written into CLAUDE.md (below), which becomes the shared one as soon as collaborators push to the repository.
 
 Research projects load no development plugins, and there is nothing to switch off: none is enabled at user scope.
 
@@ -67,23 +67,25 @@ Research projects also get `JOURNAL.md`, described next, unless the user says gi
 
 ## The project journal: JOURNAL.md
 
-Two questions, two tools. Git holds *what changed*, so no CHANGELOG. `JOURNAL.md` holds *why* and *what is open*: a dated, chronological record of verifications made, evidence gathered, decisions with their rationale, ideas discarded, and at the end of each entry the list of what remains open with its state. It lives in the project root next to README.md and CLAUDE.md, because it is a project file, not project content; deliverables live in docs/. Not an ADR set (one file per decision is too rigid for research work), not a journal inside docs/, not a separate task file.
+Two questions, two tools. Git holds *what changed*, so no CHANGELOG. `JOURNAL.md` holds *why* and *what is open*: a dated, chronological record of verifications made, evidence gathered, decisions with their rationale, ideas discarded, and at its end the one list of what remains open, with each item's state. It lives in the project root next to README.md and CLAUDE.md, because it is a project file, not project content; deliverables live in docs/. Not an ADR set (one file per decision is too rigid for research work), not a journal inside docs/, not a separate task file.
 
 The journal pays off where something human-readable beyond git is needed: research projects, long documents, protocols, work with many methodological decisions, collaborators who do not read git. Where git suffices (small code, scripts, configuration repos) it is not created.
 
 One section per session that verified or decided something, headed by the ISO date (a range when the work spanned days: `## 2026-07-14 / 2026-07-17`). Entries are concise but complete: they carry the data (counts, yields, measurements) and the sources (DOI or URL) that motivate a decision, not a summary of the conversation. Consolidated decisions do not live here but in the project's canonical document (protocol, note, CLAUDE.md): the journal records the intermediate evidence that motivates them and the doubts not yet resolved. Decisions about how the work is organized belong here with their reason; lists of files created, moved or renamed and editorial rules applied do not: the journal is not a changelog.
 
-Each entry ends with a subsection `### Open as of <date>` (`### Aperto al <data>` in Italian projects): every open node and pending task, one line each, with its state (open, in progress; aperto, in corso) and, where useful, a pointer to the section of the canonical document where it closes. A node closes only when the decision is written in the canonical document and reflected in the linked files (CLAUDE.md, README); a closed node is dropped from the next "Open as of", and the entry that closed it says so. The subsections stay, so the journal also shows what was open when; a fresh session reads only the latest one.
+The journal ends with a single open list, `## Open` (`## Aperto` in Italian projects), kept after the last dated entry and edited in place: every open node and pending task, one line each, with its state (open, in progress, or waits on what unblocks it) and, where useful, a pointer to the section of the canonical document where it closes. The next session's priority comes first. A new entry goes above the list, and ends with one line naming what it opened and what it closed (`Opened: ...; closed: ...`), so the history of the list lives in the entries and the list itself holds only the present. A node closes only when the decision is written in the canonical document and reflected in the linked files (CLAUDE.md, README); it leaves the list in the same edit that records its closing. A fresh session reads the open list.
 
-The journal is written in the project's language, taken from its README or CLAUDE.md, and the labels that other skills look for are fixed per language: `Open as of` / `Aperto al`, `open, in progress` / `aperto, in corso`. Header (English shown; the Italian rendering follows the same wording):
+A journal that still ends each entry with its own `### Open as of <date>` (`### Aperto al <data>`) converts once, in a commit of its own: the latest of those lists becomes `## Open` at the end, and the older ones are removed, since git keeps them.
+
+The journal is written in the project's language, taken from its README or CLAUDE.md, and the labels that other skills look for are fixed per language: `## Open` / `## Aperto`, `open, in progress, waits on` / `aperto, in corso, in attesa di`, `Opened:` / `Aperti:`, `closed:` / `chiusi:`. Header (English shown; the Italian rendering follows the same wording):
 
 ```markdown
 # Journal
 
-Dated record of the project's verifications, decisions and open questions. Consolidated decisions live in <canonical document> and in CLAUDE.md; here are the intermediate evidence behind them, the ideas discarded, and at the end of each entry what is still open. Git holds what changed.
+Dated record of the project's verifications, decisions and open questions. Consolidated decisions live in <canonical document> and in CLAUDE.md; here are the intermediate evidence behind them and the ideas discarded, and at the end the list of what is still open. Git holds what changed.
 ```
 
-Italian: `# Journal` with "Registro cronologico delle verifiche, delle decisioni e delle questioni aperte del progetto. Le decisioni consolidate stanno in <documento canonico> e nel CLAUDE.md; qui stanno le evidenze intermedie che le motivano, le idee scartate e, in coda a ogni voce, ciò che resta aperto. Git tiene il cosa è cambiato."
+Italian: `# Journal` with "Registro cronologico delle verifiche, delle decisioni e delle questioni aperte del progetto. Le decisioni consolidate stanno in <documento canonico> e nel CLAUDE.md; qui stanno le evidenze intermedie che le motivano e le idee scartate, e in fondo l'elenco di ciò che resta aperto. Git tiene il cosa è cambiato."
 
 ## Project conventions to seed
 
@@ -91,6 +93,10 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 
 - Git is the changelog: no CHANGELOG.md, no "modifiche" or "changelog" sections in documents; the reasoning behind a change goes in JOURNAL.md, the change itself in the commit message.
 - Commit at every consolidated decision or completed step; at the end of a session, say what is not on the remote and ask whether to push. A repository kept local on purpose states that it has no remote and is never pushed.
+- The git practice, one line naming the project's kind, which aldogor-handoff applies at every close:
+  - research: all work on `main`, committed as it consolidates;
+  - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote;
+  - shared (collaborators push to the repository): the development practice, with every branch reaching `main` through a pull request.
 - Working files carry no date in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
 - For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.
 
@@ -99,10 +105,10 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 Offer a starter CLAUDE.md: what the project is (2-3 sentences), where authority lives (which doc owns what), the 3-5 rules easiest to break by accident, the conventions above, and a "Key files" ("File chiave") list with one line per file saying what it holds and when to update it. The journal appears once, in the authority table or in the key files, never in both. Its line reads, in the project's language (adapt the canonical document's name):
 
 ```markdown
-- `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its last "Open as of" is the project's state.
+- `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its closing "Open" list is the project's state.
 ```
 
-Italian: "`JOURNAL.md`: registro datato di verifiche, decisioni intermedie e questioni aperte (il *perché*; git tiene il *cosa è cambiato*). Aggiornarlo a ogni sessione che verifica o decide qualcosa, con la data; l'ultimo "Aperto al" è lo stato del progetto."
+Italian: "`JOURNAL.md`: registro datato di verifiche, decisioni intermedie e questioni aperte (il *perché*; git tiene il *cosa è cambiato*). Aggiornarlo a ogni sessione che verifica o decide qualcosa, con la data; l'elenco "Aperto" in fondo è lo stato del progetto."
 
 Keep it lean; facts and invariants, not tutorials. The README's structure tree lists the journal with the same one-line role.
 

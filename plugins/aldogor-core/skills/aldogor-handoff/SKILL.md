@@ -26,7 +26,9 @@ What goes in: decisions taken, current status, open items with what unblocks the
 
 ## 3. The journal, when the project has one
 
-If `JOURNAL.md` exists in the project root, it gets one section headed by today's ISO date (`## 2026-08-18`, or a range if the work spanned days) with what the session verified and decided: the data (counts, yields, measurements) and the sources (DOI, URL) behind each decision, and the alternatives discarded and why. Consolidated decisions go in the canonical document; the journal keeps the evidence that motivates them. The section ends with `### Open as of <date>` (`### Aperto al <data>` in Italian projects; keep the label the journal already uses): every open node and pending task, one line each with its state (open, in progress; aperto, in corso), carried over from the previous entry, minus what closed, plus the threads of step 1 that stayed open, with the user's priority first. A node closes only when the decision is written in the canonical document and reflected in CLAUDE.md and README, and the entry says so.
+If `JOURNAL.md` exists in the project root, it gets one section headed by today's ISO date (`## 2026-08-18`, or a range if the work spanned days), placed above the open list that ends the file, with what the session verified and decided: the data (counts, yields, measurements) and the sources (DOI, URL) behind each decision, and the alternatives discarded and why. Consolidated decisions go in the canonical document; the journal keeps the evidence that motivates them. The section's last line names what the session opened and what it closed (`Opened: ...; closed: ...`, in Italian `Aperti: ...; chiusi: ...`).
+
+The open list, `## Open` (`## Aperto` in Italian projects), is the journal's last section and is edited in place: every open node and pending task, one line each with its state (open, in progress, or waits on what unblocks it; aperto, in corso, in attesa di), with what closed removed, the threads of step 1 that stayed open added, and the user's priority first. A node closes only when the decision is written in the canonical document and reflected in CLAUDE.md and README. A journal that still ends each entry with its own `### Open as of <date>` (`### Aperto al <data>`) converts first, in a commit of its own: the latest of those lists becomes the open list at the end, and the older ones are removed, since git keeps them.
 
 If the session verified or decided nothing and no item changed state, there is no journal entry: say so. A project that still carries a TODO.md folds its items into the journal's open list, deletes the file and removes its mentions from CLAUDE.md and README.
 
@@ -41,11 +43,17 @@ Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as
 
 ## 5. Git
 
-When the project is a git repository and the session can run commands, settle it in this order. A repository whose CLAUDE.md or AGENTS.md sets its own rules (no remote, pull requests, who merges) follows them. Without a shell, this step does not apply.
+When the project is a git repository and the session can run commands, settle it in this order. The repository's CLAUDE.md or AGENTS.md names its git practice, and the steps apply it:
 
-1. **Leftovers.** From `git status` and `git stash list`, list what is changed, untracked or stashed but is not the session's finished work, each with what it is. The user decides for each: commit it, keep it for later, or discard it; discarding waits for an explicit word, because it cannot be undone.
+- research: all work on the main branch;
+- development: each feature or fix on its own branch, merged into the main branch when its tests pass and then deleted;
+- shared: as development, with every branch reaching the main branch through a pull request.
+
+Other rules the repository sets (no remote, who merges) hold too. Where no practice is named, propose the one that fits the project and write it into CLAUDE.md on the user's word. Without a shell, this step does not apply.
+
+1. **Leftovers.** From `git status`, `git stash list` and `git branch --merged`, list what is changed, untracked or stashed but is not the session's finished work, and the local branches already merged but not deleted, each with what it is. The user decides for each: commit it, keep it for later, or discard it; discarding waits for an explicit word, because it cannot be undone.
 2. **Commit** the session's finished work, the updated documents included: message in the repository's language and style, nothing secret and no `.env` staged.
-3. **Branch or worktree.** If the session worked outside the main branch, propose how the work lands: merged into the main branch, pushed with a pull request, or kept as it is for later. After a merge, offer to delete the branch or the worktree. In a worktree that the desktop app manages, its own sync with the base branch comes before any manual merge.
+3. **Branch or worktree.** If the session worked outside the main branch, the work lands as the practice says: merged once its tests pass, or through a pull request; work not ready stays on its branch, and the open list says so. After a merge, delete the branch with `git branch -d` (it refuses an unmerged one) and the worktree, and offer to delete the remote branch. In a worktree that the desktop app manages, its own sync with the base branch comes before any manual merge.
 4. **Sync.** Fetch. If the remote has commits the local branch lacks, integrate them before pushing (a rebase in a repository only the user commits to, a merge or a pull request where the repository's rules say so) and report any conflict to the user instead of resolving it by guesswork.
 5. **Push.** Say what is not yet on the remote and ask whether to push; the push waits for the answer. This is the one point where the push is always proposed.
 
@@ -53,7 +61,7 @@ When the project is a git repository and the session can run commands, settle it
 
 Three to five lines, written once the steps above are done:
 
-1. What to read first, by name or path: the state document and, if needed, one or two authoritative files; in a project with a journal, its last "Open as of" (or "Aperto al") section and the canonical document.
+1. What to read first, by name or path: the state document and, if needed, one or two authoritative files; in a project with a journal, its open list (`## Open` or `## Aperto`, at the end) and the canonical document.
 2. Where the work stands, in one sentence.
 3. The next task with its reason, taken from the priority the user gave in step 1: "I'm working on [larger goal]. The next step is [task] because [what it enables]." Then the rest of the journal's open list, which the next session works through until each item is closed or waits on something outside it.
 
