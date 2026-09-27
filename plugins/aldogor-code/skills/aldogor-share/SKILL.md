@@ -1,7 +1,7 @@
 ---
 name: aldogor-share
 description: >-
-  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (AGENTS.md with the project's conventions, CLAUDE.md importing it, .claude/settings.json installing the shared plugins). Use when the user asks to share a repository ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators"), before collaborators are invited, and before a repository is made public or pushed to a public remote.
+  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (CLAUDE.md with the project's conventions, .claude/settings.json installing the shared plugins). Use when the user asks to share a repository ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators"), before collaborators are invited, and before a repository is made public or pushed to a public remote.
 ---
 
 # Aldogor-share
@@ -28,8 +28,7 @@ For each finding the user chooses: accept it for these collaborators, remove it 
 
 Collaborators receive the repository's files and never the user's global instructions, so every convention the shared work depends on is written into the project. With the user, write or update:
 
-- `AGENTS.md`, read by Claude Code (from v2.1.277, when no CLAUDE.md exists), Codex, Cursor and Copilot: what the project is and where authority lives; the journal convention (dated entries, and one open list at the end, edited in place, as the state of the project); the citation format (inline author and year linked to the DOI); no dashes as punctuation; the data rules (`data/raw/` read-only, a value with no source is [n/d]); the language of documents and commits; the collaboration workflow (a branch per piece of work, pull requests, no direct commits to main, who merges).
-- `CLAUDE.md`, whose first line is `@AGENTS.md` (an import, because a symlink breaks on Windows clones), followed by any Claude-specific lines.
+- `CLAUDE.md`: what the project is and where authority lives; the journal convention (dated entries, and one open list at the end, edited in place, as the state of the project); the citation format (inline author and year linked to the DOI); no dashes as punctuation; the data rules (`data/raw/` read-only, a value with no source is [n/d]); the language of documents and commits; the git practice line set to shared (a branch per piece of work, merged through a pull request, and who merges).
 - `.claude/settings.json`: `extraKnownMarketplaces` with the public marketplace `aldogor-claude-plugins` (GitHub source `aldogor/aldogor-claude-plugins`) and `enabledPlugins` for the plugins the project uses; collaborators install them by accepting the trust prompt.
 - `.gitignore`: `.claude/settings.local.json`, `CLAUDE.local.md`, `.env` and the data that stays local.
 - `README.md`: a short section on working in the repository with Claude (what the trust prompt installs, where the conventions live).

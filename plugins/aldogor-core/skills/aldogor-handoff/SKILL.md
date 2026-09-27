@@ -36,14 +36,16 @@ If the session verified or decided nothing and no item changed state, there is n
 
 The next session reads a few documents first and trusts them, so they have to describe the project as it now is. The pass covers the files the session created or changed, the project's CLAUDE.md and README, the state document, the journal, and the documents CLAUDE.md names as authoritative (its key files or its table of which document owns what). Each is read against the current state, looking for a path or a file that no longer exists, a line describing a decision since changed, two documents that say different things about the same fact, and a document that only repeats another.
 
-- Safe fixes are applied directly: dead references, stale lines, and contradictions where the session makes the current state clear.
-- Renames, moves, merges, deletions, and contradictions where it is unclear which side is current go to the user as a short list, one line each with the reason, and wait for approval.
+The project also has to follow the conventions of the setup, which change over time. In Claude Code, `python <this skill's folder>/scripts/check_project.py`, run in the project, lists what the project breaks among them: the git practice named in CLAUDE.md, the journal's single open list and each entry's closing line, TODO or CHANGELOG files, `.env`, the literature folder, the placement of chat exports, and the git state that step 5 settles. It changes nothing; its findings join the ones below.
+
+- Safe fixes are applied directly: dead references, stale lines, contradictions where the session makes the current state clear, and small convention fixes (a missing closing line in the journal, a `.gitignore` line, the practice line in CLAUDE.md).
+- Renames, moves, merges, deletions, contradictions where it is unclear which side is current, and conversions that reshape the project (a literature folder or a journal to convert) go to the user as a short list, one line each with the reason, and wait for approval; what the user defers becomes an item of the open list.
 
 Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as historical are read, never edited. The review of a whole folder (naming, grouping, staleness across the tree) is the tidy pass of aldogor-project-setup, in Claude Code.
 
 ## 5. Git
 
-When the project is a git repository and the session can run commands, settle it in this order. The repository's CLAUDE.md or AGENTS.md names its git practice, and the steps apply it:
+When the project is a git repository and the session can run commands, settle it in this order. The repository's CLAUDE.md names its git practice, and the steps apply it:
 
 - research: all work on the main branch;
 - development: each feature or fix on its own branch, merged into the main branch when its tests pass and then deleted;

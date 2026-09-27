@@ -14,7 +14,7 @@ Claude plugins by Aldo Gorga, a public health researcher working on digital heal
 **aldogor-code**, for Claude Code only:
 
 - `aldogor-project-setup`: scaffolds a project (research or development) and keeps an existing one in order.
-- `aldogor-share`: before collaborators are invited or a repository goes public, checks what git will not send and what the history holds, and writes the project conventions into `AGENTS.md`.
+- `aldogor-share`: before collaborators are invited or a repository goes public, checks what git will not send and what the history holds, and writes the project conventions into `CLAUDE.md`.
 - `aldogor-counsel`: an agent on Fable that the main session consults for a second perspective on decisions, plans, visual ideas and drafts.
 
 ## Install

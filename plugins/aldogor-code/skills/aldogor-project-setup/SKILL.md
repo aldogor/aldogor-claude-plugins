@@ -22,7 +22,7 @@ For research projects (protocols, papers, reviews, data work), the base tree:
 ```
 project/
 ├── docs/         # working documents: protocol, note, drafts, deliverables
-├── literature/   # sources supporting the documents
+├── literature/   # sources: bibliography.csv tracked, their PDFs and texts local
 ├── archive/      # frozen copies sent to others, superseded versions, imported chat history
 ├── JOURNAL.md    # the why, and what is open
 ├── CLAUDE.md
@@ -41,7 +41,7 @@ When the project has data (analyses, extractions, datasets), add the data subtre
 
 `data/raw/` immutability and "preserve originals, log transformations" are absolute rules, worth restating in the project's CLAUDE.md. Processed data is tidy: one table per file, one observation per row, one variable per column, one value per cell, plain CSV with a codebook next to it (variable, type, unit, allowed values, source); the scripts that produce it are the transformation log.
 
-Literature: `literature/Surname_Year.pdf` (a, b suffixes for clashes), an optional `Surname_Year.md` extract next to it, and one registry file for the folder listing each source with DOI or URL and where it is cited. The registry format is the project's bibliography file once one exists; until then a README table.
+Literature: one flat folder, `literature/` (`docs/literature/` in a development repository whose research side lives in `docs/`), managed with the literature script of aldogor-research (`scripts/literature.py`, described in its references/literature.md). `bibliography.csv` is the master record and the only file of the folder git tracks; each source's `<key>.pdf` and `<key>.md` stay local (`.gitignore`: `literature/*` and `!literature/bibliography.csv`), because publishers' PDFs and their text cannot be passed on and a committed file stays in the history. Keys are `Surname_Year`, with b and c for a second and third work of the same author and year. The first source added creates the folder and its `.gitignore` lines.
 
 Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. Superseded documents and the imported claude.ai history also live in `archive/`.
 
@@ -140,7 +140,7 @@ Convention: every repo gets a one-sentence description, three to six topics (eco
 
 Scope: the docs/ tree and the project-level documents (README, notes, plans, JOURNAL.md) of the current project; code files only on explicit request. Never touch data/raw/, gitignored private material, anything CLAUDE.md marks as do-not-modify or historical, or the content of dated frozen copies.
 
-1. Read the project's CLAUDE.md and README for its stated conventions; they outrank generic taste. Where none exist, the conventions above apply: descriptive kebab-or-snake names, working files without dates, frozen copies dated in archive/, literature as Surname_Year with one registry, folders by function, JOURNAL.md in the root. A TODO.md, a CHANGELOG or a "modifiche" section is a finding.
+1. Read the project's CLAUDE.md and README for its stated conventions; they outrank generic taste. The conventions check of aldogor-handoff (its `scripts/check_project.py`, run in the project) lists what the project breaks among the conventions a script can test; the review below covers the judgments. Where none exist, the conventions above apply: descriptive kebab-or-snake names, working files without dates, frozen copies dated in archive/, literature in one folder with bibliography.csv tracked and the texts local, folders by function, JOURNAL.md in the root. A TODO.md, a CHANGELOG or a "modifiche" section is a finding.
 2. Inventory the target tree, one line per file saying its role; a role that cannot be stated in one line is a finding.
 3. Evaluate, with evidence: misnamed (the name no longer describes the content or breaks the convention), stale (superseded, dead references, a state long past; dates and contradictions, never age alone), merge candidates (one topic in two files, or a fragment that only makes sense inside another document), grouping (files that belong together and sit apart, with the folder proposed).
 4. Propose the plan as a table: action (rename, merge into, move, delete, leave), target, one-line reason. Deletions only for true duplicates or generated artifacts; unique content merges or archives. Wait for approval, item by item if the user wants.

@@ -41,6 +41,10 @@ For every citation in a draft; the procedures, verdict tables, sampling of long 
 
 Non-bibliographic factual claims go through the same loop: institutional facts, timelines and access requirements, tool and model capabilities, affiliations and roles of third parties, and the licence of any model, dataset, font or tool proposed for use, read on its licence file or official page before the resource is proposed, never left "to be checked". Each needs a fetched web source or a document the user supplied, or it is marked [unverified]; a fact about the user himself comes only from the user or the chat.
 
+## The project's literature folder
+
+In Claude Code, the sources a project cites live in its literature folder: `bibliography.csv`, tracked by git, is the master record; each work's PDF and Markdown text stay local, named by its key. `scripts/literature.py` adds, retrieves, checks and exports them, as [references/literature.md](references/literature.md) describes. Claude reads a source through its `<key>.md`, whose header says whether it holds the full text.
+
 ## Screening mode (systematic and mapping reviews)
 
 When the task is screening a corpus, follow [references/screening.md](references/screening.md): a rubric built test-first against the user's hand labels, then parallel batches and a PRISMA-ready report.
