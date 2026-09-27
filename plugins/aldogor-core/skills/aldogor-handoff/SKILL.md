@@ -49,7 +49,7 @@ When the project is a git repository and the session can run commands, settle it
 
 - research: all work on the main branch;
 - development: each feature or fix on its own branch, merged into the main branch when its tests pass and then deleted;
-- shared: as development, with every branch reaching the main branch through a pull request.
+- shared: as development, with every branch reaching the main branch through a pull request that the owner merges.
 
 Other rules the repository sets (no remote, who merges) hold too. Where no practice is named, propose the one that fits the project and write it into CLAUDE.md on the user's word. Without a shell, this step does not apply.
 

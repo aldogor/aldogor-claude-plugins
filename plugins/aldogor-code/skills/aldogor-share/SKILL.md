@@ -26,12 +26,12 @@ For each finding the user chooses: accept it for these collaborators, remove it 
 
 ## 3. The project layer
 
-Collaborators receive the repository's files and never the user's global instructions, so every convention the shared work depends on is written into the project. With the user, write or update:
+Collaborators receive the repository's files and never the user's global instructions (`~/.claude`), so every convention the shared work depends on is written into the project. With the user, write or update:
 
-- `CLAUDE.md`: what the project is and where authority lives; the journal convention (dated entries, and one open list at the end, edited in place, as the state of the project); the citation format (inline author and year linked to the DOI); no dashes as punctuation; the data rules (`data/raw/` read-only, a value with no source is [n/d]); the language of documents and commits; the git practice line set to shared (a branch per piece of work, merged through a pull request, and who merges).
-- `.claude/settings.json`: `extraKnownMarketplaces` with the public marketplace `aldogor-claude-plugins` (GitHub source `aldogor/aldogor-claude-plugins`) and `enabledPlugins` for the plugins the project uses; collaborators install them by accepting the trust prompt.
+- `CLAUDE.md`: what the project is and where authority lives; the journal convention (dated entries, and one open list at the end, edited in place, as the state of the project); the citation format (inline author and year linked to the DOI); no dashes as punctuation; the data rules (`data/raw/` read-only, a value with no source is [n/d]); the language of documents and commits; the git practice line set to shared (a branch per piece of work, merged through a pull request that the owner merges). CLAUDE.md travels with every copy of the repository, a public repository or a public cut included, so it holds conventions and pointers and never private context: names of people, internal repositories, study details stay in documents that remain internal.
+- `.claude/settings.json`: the repository's whole Claude configuration, in one committed file: `extraKnownMarketplaces` with the public marketplace `aldogor-claude-plugins` (GitHub source `aldogor/aldogor-claude-plugins`) and `enabledPlugins` for every plugin the project uses, the development ones included; collaborators install them by accepting the trust prompt. No second, personal layer sits next to it. A `.gitignore` that excludes `.claude/` gets `!.claude/settings.json`.
 - `.gitignore`: `.claude/settings.local.json`, `CLAUDE.local.md`, `.env` and the data that stays local.
-- `README.md`: a short section on working in the repository with Claude (what the trust prompt installs, where the conventions live).
+- `README.md`: a short section on working in the repository with Claude: install git and the GitHub CLI and sign in (`gh auth login`), accept the trust prompt, which installs the plugins, and find the conventions in CLAUDE.md. Each person's Claude then creates the branch and opens the pull request, and the owner merges it; GitHub Free does not enforce reviews on a private repository, so the rule rests on CLAUDE.md.
 
 ## 4. Close
 

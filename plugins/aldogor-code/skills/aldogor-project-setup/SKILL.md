@@ -96,7 +96,7 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 - The git practice, one line naming the project's kind, which aldogor-handoff applies at every close:
   - research: all work on `main`, committed as it consolidates;
   - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote;
-  - shared (collaborators push to the repository): the development practice, with every branch reaching `main` through a pull request.
+  - shared (collaborators may edit the repository): the development practice, with every branch reaching `main` through a pull request that the owner merges.
 - Working files carry no date in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
 - For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.
 
