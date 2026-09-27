@@ -16,7 +16,7 @@ List what git will not send: `git status --ignored --porcelain` for ignored path
 
 A clone carries every commit, so the check covers the whole history as well as the current tree:
 
-- secrets: `gitleaks git --redact` when gitleaks is installed (`winget install Gitleaks.Gitleaks`), otherwise a search of every commit for keys, tokens, passwords and private keys, and every `.env` file ever added (`git log --all --diff-filter=A --name-only`);
+- secrets: `gitleaks git --redact` when gitleaks is installed (`winget install Gitleaks.Gitleaks` on Windows, `brew install gitleaks` on macOS, the release binary from its GitHub page on Linux), otherwise a search of every commit for keys, tokens, passwords and private keys, and every `.env` file ever added (`git log --all --diff-filter=A --name-only`);
 - personal data: files under `data/` with identifiers, and email addresses, phone numbers or health data in documents;
 - claude.ai chat exports ever committed;
 - absolute local paths (`C:\Users\...`, `/Users/...`) in tracked files;
