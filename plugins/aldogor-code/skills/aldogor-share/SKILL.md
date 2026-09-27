@@ -1,7 +1,7 @@
 ---
 name: aldogor-share
 description: >-
-  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (CLAUDE.md with the project's conventions, .claude/settings.json installing the shared plugins). Use when the user asks to share a repository ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators"), before collaborators are invited, and before a repository is made public or pushed to a public remote.
+  Prepares a project repository for collaborators and checks it before anyone is invited: what git ignores or does not track (what will not be shared), secrets, personal data and local paths in the tree and in the whole history, and the project layer collaborators need (CLAUDE.md with the project's conventions, .claude/settings.json installing the shared plugins); publishes a repository's public version from its private one through an include-list. Use when the user asks to share a repository ("aldogor-share", "prepara il repo per la condivisione", "condividi il repo", "share this repo with collaborators"), before collaborators are invited, before a repository gets a public version, and when that version is published ("pubblica la versione pubblica", "publish the public repo").
 ---
 
 # Aldogor-share
@@ -33,6 +33,12 @@ Collaborators receive the repository's files and never the user's global instruc
 - `.gitignore`: `.claude/settings.local.json`, `CLAUDE.local.md`, `.env` and the data that stays local.
 - `README.md`: a short section on working in the repository with Claude: install git and the GitHub CLI and sign in (`gh auth login`), accept the trust prompt, which installs the plugins, and find the conventions in CLAUDE.md. Each person's Claude then creates the branch and opens the pull request, and the owner merges it; GitHub Free does not enforce reviews on a private repository, so the rule rests on CLAUDE.md.
 
-## 4. Close
+## 4. Publishing a public version
+
+A repository with a public version is two repositories, as aldogor-project-setup sets them up: `<name>-internal` holds the work and its history, and `<name>` receives only what `publish.txt`, at the private root, lists. `scripts/publish.py` in this skill's folder builds the public tree from the last commit, holds back the files that never go public (the list itself, JOURNAL.md, CLAUDE.local.md, `.env` files, personal settings, chat exports, raw data, literature texts), stops on a stale rule or a credential, writes into the sibling clone of the public repository and commits there; `--check` shows what would go and writes nothing.
+
+With the user, write `publish.txt`: `target:` the sibling clone, `check:` and `validate:` commands where the project has them, then one line per published folder or file, explicit paths before broad globs. A repository published another way (an exclude-list, a public branch or remote in the working clone) moves to this one: the paths it published become the include-list, its publishing tools stay private, and the public repository's next commit drops them. Pushing the public clone stays the user's step.
+
+## 5. Close
 
 Give the user a checklist: what is shared, what stays local, the history decisions, the files written. Commit on the user's word. Then the user invites the collaborators on GitHub; on a personal account's private repository, collaborators get write access.

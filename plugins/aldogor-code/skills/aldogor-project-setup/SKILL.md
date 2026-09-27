@@ -118,7 +118,7 @@ When the project continues work started in a claude.ai Project, its chats and me
 
 ## Visibility, decided once
 
-Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: no private material ever enters the history, because git keeps what a later visibility change exposes; the project's private stream (working journal, notes with names of third parties) goes to a companion private repository `<name>-internal`. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
+Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
 
 ## GitHub
 

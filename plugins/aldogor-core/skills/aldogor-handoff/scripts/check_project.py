@@ -16,7 +16,10 @@ this script changes with them, in the same commit. It reads the repository and c
     no other file of it, and the .gitignore keeps its PDFs and texts local;
   - the claude.ai chat exports: a project repository holds archive/chat-export-claude-ai/ only as an untracked
     working folder while its chats are distilled into the journal (aldogor-claude-setup keeps its own archive),
-    and a public repository tracks JOURNAL.md or TODO.md only when they are written for the public.
+    and a public repository tracks JOURNAL.md or TODO.md only when they are written for the public;
+  - publication: a public version is published from an include-list (publish.txt) into a sibling clone with
+    aldogor-share's publish script, so an exclude-list (public_exclude.txt) or a remote named public in the
+    working clone is the older model.
 Naming, stale content and the grouping of files are judgments, left to the tidy pass of aldogor-project-setup.
 
 Usage:
@@ -145,6 +148,17 @@ def literature_findings(repo: pathlib.Path) -> list[str]:
     return out
 
 
+def publication_findings(repo: pathlib.Path) -> list[str]:
+    """The public version against the publication model: an include-list (publish.txt) and a sibling clone."""
+    out = []
+    for rel in ("public_exclude.txt", "config/public_exclude.txt"):
+        if (repo / rel).is_file():
+            out.append(f"{rel} is an exclude-list: publish with an include-list (publish.txt) through aldogor-share's publish script")
+    if "public" in git(repo, "remote").stdout.split():
+        out.append("the public repository is a remote of this clone: publish into a sibling clone with aldogor-share's publish script")
+    return out
+
+
 def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False, mirror: bool = False) -> dict:
     """The project's state and the conventions it breaks, as a dict whose "findings" lists one line each.
 
@@ -209,6 +223,7 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
         f.append(".env not ignored")
     if not mirror:
         f += literature_findings(repo)
+        f += publication_findings(repo)
     present = (repo / ARCHIVE).exists()
     archive_tracked = present and bool(tracked(repo, ARCHIVE))
     if visibility == "public" and tracked(repo, "JOURNAL.md", "TODO.md"):
