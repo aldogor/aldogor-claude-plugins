@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Publishes the public version of a repository from its private one.
 
-Two repositories, one direction: the private repository (conventionally `<name>-internal`) is where all the
-work happens; the public repository only receives what the private one lists in `publish.txt`, one commit per
-publication, and never its history. The public repository sits in a sibling clone that nobody works in, so the
-private history can never be pushed to the public remote by mistake.
+Two repositories, one direction: the private repository (conventionally `<name>-internal` on GitHub, cloned in
+the folder `<name>`) is where all the work happens; the public repository only receives what the private one
+lists in `publish.txt`, one commit per publication, and never its history. The public repository sits in a
+sibling clone that nobody works in (conventionally the folder `<name>-public`), so the private history can
+never be pushed to the public remote by mistake.
 
 publish.txt, at the private repository's root, is an include-list: a file the list does not name stays private,
 so a new file is never published by accident, and the list itself is never published. One entry per line, `#`

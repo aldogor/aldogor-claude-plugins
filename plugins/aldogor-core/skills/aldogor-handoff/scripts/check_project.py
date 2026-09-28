@@ -19,7 +19,10 @@ this script changes with them, in the same commit. It reads the repository and c
     and a public repository tracks JOURNAL.md or TODO.md only when they are written for the public;
   - publication: a public version is published from an include-list (publish.txt) into a sibling clone with
     aldogor-share's publish script, so an exclude-list (public_exclude.txt) or a remote named public in the
-    working clone is the older model.
+    working clone is the older model;
+  - the repository's folder is never named `<name>-internal`: that suffix names only the private GitHub
+    repository of a project with a public version, whose clone is the folder `<name>` and whose public
+    clone is the sibling folder `<name>-public`.
 Naming, stale content and the grouping of files are judgments, left to the tidy pass of aldogor-project-setup.
 
 Usage:
@@ -156,6 +159,9 @@ def publication_findings(repo: pathlib.Path) -> list[str]:
             out.append(f"{rel} is an exclude-list: publish with an include-list (publish.txt) through aldogor-share's publish script")
     if "public" in git(repo, "remote").stdout.split():
         out.append("the public repository is a remote of this clone: publish into a sibling clone with aldogor-share's publish script")
+    # -internal belongs to the GitHub repository's name only; the local folder carries the bare project name.
+    if repo.name.endswith("-internal"):
+        out.append(f"folder named {repo.name}: only the GitHub repository carries -internal, rename the folder to {repo.name.removesuffix('-internal')}")
     return out
 
 

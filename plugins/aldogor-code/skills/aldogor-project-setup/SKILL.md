@@ -118,11 +118,11 @@ When the project continues work started in a claude.ai Project, its chats and me
 
 ## Visibility, decided once
 
-Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
+Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. Only the GitHub name carries the suffix: the private repository is cloned in the folder `<name>`, and the public one in the sibling folder `<name>-public`, which is publish.txt's `target:`. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
 
 ## GitHub
 
-Once the first commit exists, ask whether to create the remote, unless the repository is local on purpose: a repository with no remote has no off-machine copy. Private repo with proper metadata, one command plus topics:
+Once the first commit exists, ask whether to create the remote, unless the repository is local on purpose: a repository with no remote has no off-machine copy. Private repo with proper metadata, one command plus topics, named `<name>-internal` when the project may become public:
 
 ```
 gh repo create <name> --private --source . --push --description "<one sentence: what it is, who it is for>" --disable-wiki
