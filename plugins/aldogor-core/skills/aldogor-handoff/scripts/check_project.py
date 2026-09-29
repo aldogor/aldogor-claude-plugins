@@ -22,7 +22,13 @@ this script changes with them, in the same commit. It reads the repository and c
     working clone is the older model;
   - the repository's folder is never named `<name>-internal`: that suffix names only the private GitHub
     repository of a project with a public version, whose clone is the folder `<name>` and whose public
-    clone is the sibling folder `<name>-public`.
+    clone is the sibling folder `<name>-public`;
+  - every tracked top-level folder belongs to the standard layout (the research tree of aldogor-project-setup,
+    plus the src/, tests/, public/, assets/, app/ and gradle/ that development stacks bring) or has its line
+    in CLAUDE.md saying what it holds: a folder the project needs is described, drift is not;
+  - every plugin that .claude/settings.json (or settings.local.json) enables is installed for this folder: the
+    settings file enables plugins but installs nothing, and each machine records its installs per folder in
+    ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist).
 Naming, stale content and the grouping of files are judgments, left to the tidy pass of aldogor-project-setup.
 
 Usage:
@@ -34,6 +40,8 @@ Runs with Python 3.10 or later on Windows, macOS and Linux, with git on the PATH
 """
 
 import argparse
+import json
+import os
 import pathlib
 import re
 import shutil
@@ -51,6 +59,9 @@ CLOSING_LINE = re.compile(r"^\s*(?:-\s*)?(Opened|Closed|Aperti|Chiusi)\s*:", re.
 # The date from which each journal entry closes with its Opened and closed line.
 CLOSING_LINE_SINCE = "2026-09-28"
 LITERATURE_DIRS = ("literature", "docs/literature")
+# The top-level folders of the standard layout: the research tree of aldogor-project-setup and the folders that
+# development stacks bring. Any other tracked top-level folder is described in the project's CLAUDE.md.
+LAYOUT = {"docs", "literature", "archive", "data", "scripts", "outputs", "src", "tests", "public", "assets", "app", "gradle"}
 
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
@@ -165,6 +176,45 @@ def publication_findings(repo: pathlib.Path) -> list[str]:
     return out
 
 
+def layout_findings(repo: pathlib.Path) -> list[str]:
+    """Tracked top-level folders outside the standard layout that CLAUDE.md does not describe (named as `folder/`)."""
+    claude_md = repo / "CLAUDE.md"
+    text = claude_md.read_text(encoding="utf-8", errors="replace") if claude_md.is_file() else ""
+    tops = sorted({p.split("/")[0] for p in tracked(repo) if "/" in p and not p.startswith(".")})
+    extra = [t for t in tops if t not in LAYOUT and not re.search(rf"(?<![\w.-]){re.escape(t)}/", text)]
+    return [f"top-level folder {t}/ is outside the standard layout and CLAUDE.md does not say what it holds" for t in extra]
+
+
+def claude_dir() -> pathlib.Path:
+    """The Claude Code folder: CLAUDE_CONFIG_DIR when set, otherwise ~/.claude."""
+    return pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR") or pathlib.Path.home() / ".claude")
+
+
+def plugin_findings(repo: pathlib.Path) -> list[str]:
+    """Plugins the project's settings enable that have no install for this folder, and so do not load here.
+
+    A user-scope install covers every folder; otherwise the registry needs a record of the settings file's scope
+    (project for settings.json, local for settings.local.json) whose projectPath is this folder."""
+    registry = claude_dir() / "plugins" / "installed_plugins.json"
+    here = os.path.normcase(os.path.normpath(repo))
+    out = []
+    for rel, scope in ((".claude/settings.json", "project"), (".claude/settings.local.json", "local")):
+        settings = repo / rel
+        if not settings.is_file() or not registry.is_file():
+            continue
+        try:
+            enabled = [k for k, v in (json.loads(settings.read_text(encoding="utf-8")).get("enabledPlugins") or {}).items() if v is True]
+            records = json.loads(registry.read_text(encoding="utf-8")).get("plugins", {})
+        except (json.JSONDecodeError, AttributeError):
+            out.append(f"{rel} or the plugin registry is not valid JSON")
+            continue
+        for pid in enabled:
+            if any(r.get("scope") == "user" or (r.get("scope") == scope and os.path.normcase(os.path.normpath(r.get("projectPath") or "")) == here) for r in records.get(pid, [])):
+                continue
+            out.append(f"{pid} is enabled in {rel} but not installed for this folder, so it does not load: claude plugin install {pid} --scope {scope}")
+    return out
+
+
 def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False, mirror: bool = False) -> dict:
     """The project's state and the conventions it breaks, as a dict whose "findings" lists one line each.
 
@@ -230,6 +280,8 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
     if not mirror:
         f += literature_findings(repo)
         f += publication_findings(repo)
+        f += layout_findings(repo)
+        f += plugin_findings(repo)
     present = (repo / ARCHIVE).exists()
     archive_tracked = present and bool(tracked(repo, ARCHIVE))
     if visibility == "public" and tracked(repo, "JOURNAL.md", "TODO.md"):
