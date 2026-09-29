@@ -10,8 +10,8 @@ Every new project starts the same way; this skill carries the checklist so no se
 
 ## Required files, any project
 
-- `.env` (never committed) and `.env.example` (placeholders, committed)
 - `.gitignore` including at least: `.env`, `__pycache__/`, `.DS_Store`, `*.log`
+- in a project whose code reads secrets or keys, `.env` holds them and is never committed, and `.env.example`, committed, lists the same names with placeholders; a project that reads none has neither
 - `README.md`: first paragraph must be able to stand alone as the repo description
 - `git init`, first commit after the skeleton exists; rename the branch to `main` before any push
 
