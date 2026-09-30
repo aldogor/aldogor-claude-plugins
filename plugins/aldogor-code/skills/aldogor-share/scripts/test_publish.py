@@ -78,10 +78,10 @@ class PublishTest(unittest.TestCase):
         self.assertEqual(self.published(), ["a.md"])
 
     def test_globs_hold_back_never_public_files(self):
-        self.repo({"README.md": "r", "JOURNAL.md": "j", "CLAUDE.local.md": "l", "literature/bibliography.csv": "key", "literature/Smith_2020.md": "text"}, "target: ../proj\n*.md\nliterature/**\n")
+        self.repo({"README.md": "r", "JOURNAL.md": "j", "CLAUDE.local.md": "l", "literature/bibliography.json": "[]", "literature/Smith_2020.md": "text"}, "target: ../proj\n*.md\nliterature/**\n")
         logs = []
         pub.publish(self.private, log=logs.append)
-        self.assertEqual(self.published(), ["README.md", "literature/bibliography.csv"])
+        self.assertEqual(self.published(), ["README.md", "literature/bibliography.json"])
         self.assertTrue(any("held back" in l and "JOURNAL.md" in l and "publish.txt" not in l for l in logs))
 
     def test_an_explicit_never_public_file_stops_the_publication(self):

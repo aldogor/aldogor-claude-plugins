@@ -12,8 +12,9 @@ this script changes with them, in the same commit. It reads the repository and c
     with its Opened and closed line (`Opened: ...; closed: ...`, `Aperti: ...; chiusi: ...`);
   - no TODO.md and no CHANGELOG.md: the open list is the journal's, and git is the changelog;
   - `.env` is not tracked and is ignored;
-  - the literature folder (literature/ or docs/literature/), when present, holds bibliography.csv, git tracks
-    no other file of it, and the .gitignore keeps its PDFs and texts local;
+  - the literature folder (literature/ or docs/literature/), when present, holds bibliography.json (a folder
+    that keeps the older bibliography.csv is converted once), git tracks no other file of it, and the
+    .gitignore keeps its PDFs and texts local;
   - the claude.ai chat exports: a project repository holds archive/chat-export-claude-ai/ only as an untracked
     working folder while its chats are distilled into the journal (aldogor-claude-setup keeps its own archive),
     and a public repository tracks JOURNAL.md or TODO.md only when they are written for the public;
@@ -147,18 +148,23 @@ def latest_entry_without_closing_line(text: str) -> str | None:
 
 
 def literature_findings(repo: pathlib.Path) -> list[str]:
-    """The literature folder against its convention: bibliography.csv present, nothing else tracked, texts ignored."""
+    """The literature folder against its convention: bibliography.json present, nothing else tracked, texts ignored.
+    A folder that still keeps the older bibliography.csv is reported once, as a conversion to run."""
     out = []
     for rel in LITERATURE_DIRS:
         if not (repo / rel).is_dir():
             continue
-        if not (repo / rel / "bibliography.csv").is_file():
-            out.append(f"{rel}/ has no bibliography.csv: convert it with aldogor-research's literature script")
-        others = [f for f in tracked(repo, rel) if f != f"{rel}/bibliography.csv"]
+        if (repo / rel / "bibliography.json").is_file():
+            pass
+        elif (repo / rel / "bibliography.csv").is_file():
+            out.append(f"{rel}/ keeps the older bibliography.csv: turn it into bibliography.json with `literature.py convert` (aldogor-research)")
+        else:
+            out.append(f"{rel}/ has no bibliography.json: convert it with aldogor-research's literature script")
+        others = [f for f in tracked(repo, rel) if f not in (f"{rel}/bibliography.json", f"{rel}/bibliography.csv")]
         if others:
-            out.append(f"{plural(len(others), 'file')} of {rel}/ tracked by git besides bibliography.csv: untrack them (git rm --cached)")
+            out.append(f"{plural(len(others), 'file')} of {rel}/ tracked by git besides bibliography.json: untrack them (git rm --cached)")
         if not ignored(repo, f"{rel}/any.pdf") or not ignored(repo, f"{rel}/any.md"):
-            out.append(f"{rel}/ PDFs and texts not ignored: add `{rel}/*` and `!{rel}/bibliography.csv` to .gitignore")
+            out.append(f"{rel}/ PDFs and texts not ignored: add `{rel}/*` and `!{rel}/bibliography.json` to .gitignore")
     return out
 
 

@@ -22,7 +22,7 @@ For research projects (protocols, papers, reviews, data work), the base tree:
 ```
 project/
 ├── docs/         # working documents: protocol, note, drafts, deliverables
-├── literature/   # sources: bibliography.csv tracked, their PDFs and texts local
+├── literature/   # sources: bibliography.json tracked, their PDFs and texts local
 ├── archive/      # frozen copies sent to others, superseded versions, imported chat history
 ├── JOURNAL.md    # the why, and what is open
 ├── CLAUDE.md
@@ -41,7 +41,7 @@ When the project has data (analyses, extractions, datasets), add the data subtre
 
 `data/raw/` immutability and "preserve originals, log transformations" are absolute rules, worth restating in the project's CLAUDE.md. Processed data is tidy: one table per file, one observation per row, one variable per column, one value per cell, plain CSV with a codebook next to it (variable, type, unit, allowed values, source); the scripts that produce it are the transformation log.
 
-Literature: one flat folder, `literature/` (`docs/literature/` in a development repository whose research side lives in `docs/`), managed with the literature script of aldogor-research (`scripts/literature.py`, described in its references/literature.md). `bibliography.csv` is the master record and the only file of the folder git tracks; each source's `<key>.pdf` and `<key>.md` stay local (`.gitignore`: `literature/*` and `!literature/bibliography.csv`), because publishers' PDFs and their text cannot be passed on and a committed file stays in the history. Keys are `Surname_Year`, with b and c for a second and third work of the same author and year. The first source added creates the folder and its `.gitignore` lines.
+Literature: one flat folder, `literature/` (`docs/literature/` in a development repository whose research side lives in `docs/`), managed with the literature script of aldogor-research (`scripts/literature.py`, described in its references/literature.md). `bibliography.json`, a CSL JSON array that Pandoc reads as it is, is the record and the only file of the folder git tracks; each source's `<key>.pdf` and `<key>.md` stay local (`.gitignore`: `literature/*` and `!literature/bibliography.json`), because publishers' PDFs and their text cannot be passed on and a committed file stays in the history. Keys are `Surname_Year`, with b and c for a second and third work of the same author and year. The first source added creates the folder and its `.gitignore` lines.
 
 Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. Superseded documents and the imported claude.ai history also live in `archive/`.
 

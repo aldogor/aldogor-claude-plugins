@@ -43,7 +43,7 @@ Non-bibliographic factual claims go through the same loop: institutional facts, 
 
 ## The project's literature folder
 
-In Claude Code, the sources a project cites live in its literature folder: `bibliography.csv`, tracked by git, is the master record; each work's PDF and Markdown text stay local, named by its key. `scripts/literature.py` adds, retrieves, checks and exports them, as [references/literature.md](references/literature.md) describes. Claude reads a source through its `<key>.md`, whose header says whether it holds the full text.
+In Claude Code, the sources a project cites live in its literature folder: `bibliography.json`, tracked by git, is the record, a CSL JSON array that Pandoc reads as it is, with where the project uses each work in `custom.cited_in`; each work's PDF and Markdown text stay local, named by its key. `scripts/literature.py` adds, retrieves, checks and lists them, as [references/literature.md](references/literature.md) describes. Claude reads a source through its `<key>.md`, whose header says whether it holds the full text, the abstract, the summary or the metadata.
 
 ## Screening mode (systematic and mapping reviews)
 

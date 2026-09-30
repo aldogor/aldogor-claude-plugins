@@ -24,7 +24,7 @@ never published.
 
 Some files never go public, whatever the list says: publish.txt, JOURNAL.md, CLAUDE.local.md, .env files
 (.env.example and its kin excepted), .claude/settings.local.json, claude.ai chat exports, data/raw/, and the texts
-of a literature folder (its bibliography.csv may go). A glob or folder rule holds them back and reports them.
+of a literature folder (its record, bibliography.json or the older bibliography.csv, may go). A glob or folder rule holds them back and reports them.
 Before anything is written, the publication stops on any of these findings:
   - a rule that names a never-public file explicitly;
   - a rule that matches no committed file (a rule left behind by a rename protects nothing);
@@ -67,7 +67,7 @@ SECRETS = [
 ]
 ENV_FILE = re.compile(r"(^|/)\.env(\.[^/]+)?$")
 ENV_ALLOWED = re.compile(r"\.env\.(example|sample|template|dist)$")
-LITERATURE = re.compile(r"(^|/)literature/(?!bibliography\.csv$)[^/]+$")
+LITERATURE = re.compile(r"(^|/)literature/(?!bibliography\.(json|csv)$)[^/]+$")
 
 
 class PublishError(Exception):
@@ -124,7 +124,7 @@ def never_public(path: str) -> str | None:
     if re.search(r"(^|/)data/raw/", path):
         return "raw data never goes public"
     if LITERATURE.search(path):
-        return "the texts of a literature folder never go public (bibliography.csv may)"
+        return "the texts of a literature folder never go public (its record, bibliography.json, may)"
     return None
 
 

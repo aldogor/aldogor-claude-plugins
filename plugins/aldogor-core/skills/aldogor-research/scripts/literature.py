@@ -3,34 +3,51 @@
 
 The library is one flat folder of the project, literature/ at the root (docs/literature/ where a development
 repository keeps its research side in docs/), holding
-    bibliography.csv   the master record, tracked by git: one row per cited item, UTF-8 with BOM, sorted by
-                       first author
+    bibliography.json  the record, tracked by git: a CSL JSON array (the data model of citation processors,
+                       read by Pandoc as it is), one entry per cited work, sorted by id. An entry keeps what
+                       identifies and cites the work (id, type, title, language, author, issued,
+                       container-title or publisher, volume, issue, page, DOI, PMID, PMCID, and URL for a work
+                       without a DOI) and, in its custom object, what the project writes about it: cited_in
+                       (where the project uses it) and summary (a description written for a work without an
+                       abstract). Any other field of an entry is kept as found.
     <key>.pdf          the full text of a work, when a legal copy was obtained (local, ignored by git)
-    <key>.md           the text of a work for reading and searching (local, ignored by git); its YAML header
-                       says (text_source) whether it holds the full text, the abstract only or the metadata only
-The key is the name of both files and the work's citation key. A new library uses Surname_Year keys
+    <key>.md           the text of a work for reading and searching (local, ignored by git): the full text,
+                       the abstract, the summary or the metadata, as its YAML header says (text_source), with
+                       the licence of the work
+Nothing in the record describes one machine: what the folder holds is read from the folder, and what a source
+can give again (the abstract, the licence, the open-access status, update notices) is looked up when needed.
+The id is the name of both files and the work's citation key. A new library uses Surname_Year keys
 (Iyamu_2021, DelReyPuech_2026, WHO_2025; a second work of the same author and year gets b, then c); a library
 whose keys are mostly citation keys in the form author, year, first title word (alonzo2021interplay) keeps
-that form for the works it adds. The files are rebuilt from the CSV with fetch, collect and md, so a clone
-that has only the CSV can get its open-access texts back.
+that form for the works it adds. The files are rebuilt from the record with fetch, collect and md, so a clone
+that has only the record gets its open-access texts back.
 
 Subcommands (run from anywhere inside the project: the library is the literature/ or docs/literature/ folder
-holding bibliography.csv, found from the working directory up to the repository root, or given with --lib)
+holding bibliography.json, found from the working directory up to the repository root, or given with --lib)
     add DOI [--key K] [--title T] [--cited-in T] [--note T] [--pdf PATH]
-                        add a work: metadata from Crossref, abstract, legal open-access full text,
-                        Markdown, new row in the CSV. In a project without a library, the first add creates
-                        literature/ at the repository root and the .gitignore lines that keep its files local
+                        add a work: metadata from Crossref, legal open-access full text or abstract,
+                        Markdown, new entry in the record. In a project without a library, the first add
+                        creates literature/ at the repository root and the .gitignore lines that keep its
+                        files local
     fetch [KEY ...]     try the legal open-access sources again for works whose full text is not in the
-                        folder (in a fresh clone, every work with a DOI)
+                        folder (in a fresh clone, every work with a DOI), writing the full text or the abstract
     collect [--from DIR]
                         file the PDFs downloaded by hand (default: the Downloads folder) under their keys
     md [KEY ...] [--force]
-                        write <key>.md again from <key>.pdf, or from the abstract, or from the metadata
-    check               consistency report between the CSV and the files; exit code 1 on problems
-    bib [--out PATH]    BibTeX of the whole library with the same keys (printed unless --out is given), for
-                        pandoc and LaTeX
-A work without a DOI (a report, a web page) is added as a row written by hand, with its url; md then writes
-its Markdown from a PDF placed in the library as <key>.pdf.
+                        write <key>.md again from <key>.pdf; a work without a PDF gets a missing <key>.md
+                        from its summary or its metadata (fetch brings the abstract)
+    check [--fix]       the record and its agreement with the files; exit code 1 on problems; --fix first
+                        rewrites the record in the script's layout
+    list [KEY ...] [--csv PATH]
+                        each work with the text the folder holds for it; --csv writes the table for a
+                        spreadsheet, R or Python
+    convert             turn the older bibliography.csv into bibliography.json, once, with no network call
+--json, before the subcommand, prints one JSON object on standard output; the messages go to standard error.
+Exit codes: 0 done, 1 check found problems, 2 refused (usage, a DOI or key that does not fit, no library, an
+unreadable record), 3 a source the command needs could not be reached.
+A work without a DOI (a report, a web page) is an entry written by hand (id, type, title, author, issued,
+publisher or container-title, URL, custom.summary); md then writes its Markdown from a PDF placed in the
+library as <key>.pdf. For LaTeX or Typst, pandoc bibliography.json -t biblatex -o references.bib writes a .bib.
 
 Retrieval rules:
   - only legal free copies are fetched: the PMC open-access set, Europe PMC, the publisher and repository
@@ -50,14 +67,15 @@ pymupdf4llm (`python -m pip install requests lxml pymupdf pymupdf4llm`); markitd
 web page saved from the browser (collect). Adapted from the library script of stilme-qe-app (199fb2a).
 """
 import argparse
+import collections
 import csv
 import glob
 import html
+import json
 import os
 import pathlib
 import re
 import shutil
-import subprocess
 import sys
 import time
 import unicodedata
@@ -68,57 +86,148 @@ try:
     import requests
     from lxml import etree
 except ImportError as _missing:       # a clear message instead of a traceback on a machine without them
-    sys.exit(f'literature.py needs {_missing.name}: python -m pip install requests lxml pymupdf pymupdf4llm')
+    print(f'literature.py needs {_missing.name}: python -m pip install requests lxml pymupdf pymupdf4llm',
+          file=sys.stderr)
+    sys.exit(2)
 
 # ====================================================================== paths
 # The library folder and the optional local archive are set by main() from --lib and --archive, or found
 # from the working directory; tests set them directly.
 LIT = None
 ARCHIVE = None
-CSV_NAME = 'bibliography.csv'
+JSON = False        # set by --json: messages go to standard error, standard output carries one JSON object
+RECORD = 'bibliography.json'
+LEGACY = 'bibliography.csv'     # the record before CSL JSON, turned into bibliography.json by convert
 DOWNLOADS = os.path.join(os.path.expanduser('~'), 'Downloads')
 
-# Columns of bibliography.csv, in their order in the file. authors_full holds every author as
-# "Family, Given" separated by "; " (from Crossref); it feeds the BibTeX export and new Markdown headers.
-COLUMNS = ['key', 'authors', 'year', 'title', 'source', 'kind', 'abstract_or_summary', 'text_type',
-           'text_source', 'cited_in', 'full_text', 'access', 'doi', 'url', 'md', 'pdf', 'volume', 'issue',
-           'pages', 'pmid', 'pmcid', 'license', 'update_notice', 'authors_full']
+# Fields of an entry in the order the script writes them; any other field follows, in the order found.
+FIELDS = ['id', 'type', 'title', 'language', 'author', 'issued', 'container-title', 'publisher', 'volume',
+          'issue', 'page', 'DOI', 'PMID', 'PMCID', 'URL', 'custom']
+# Keys of an entry's custom object that the script manages, in their order; any other key is kept.
+CUSTOM = ['cited_in', 'summary']
 
-# Crossref work types as they are written in the kind column.
-KIND = {'journal-article': 'journal article', 'book': 'book', 'monograph': 'book', 'edited-book': 'book',
-        'book-chapter': 'book chapter', 'proceedings-article': 'conference paper', 'report': 'report',
-        'posted-content': 'preprint', 'dataset': 'dataset', 'reference-entry': 'reference entry'}
+# The item types of the CSL schema 1.0.2 (github.com/citation-style-language/schema, csl-data.json).
+CSL_TYPES = {
+    'article', 'article-journal', 'article-magazine', 'article-newspaper', 'bill', 'book', 'broadcast',
+    'chapter', 'classic', 'collection', 'dataset', 'document', 'entry', 'entry-dictionary',
+    'entry-encyclopedia', 'event', 'figure', 'graphic', 'hearing', 'interview', 'legal_case', 'legislation',
+    'manuscript', 'map', 'motion_picture', 'musical_score', 'pamphlet', 'paper-conference', 'patent',
+    'performance', 'periodical', 'personal_communication', 'post', 'post-weblog', 'regulation', 'report',
+    'review', 'review-book', 'software', 'song', 'speech', 'standard', 'thesis', 'treaty', 'webpage'}
+# Crossref work types as CSL types; any other Crossref type becomes a document.
+CSL_TYPE = {'journal-article': 'article-journal', 'book': 'book', 'monograph': 'book', 'edited-book': 'book',
+            'reference-book': 'book', 'book-chapter': 'chapter', 'book-section': 'chapter', 'book-part': 'chapter',
+            'proceedings-article': 'paper-conference', 'report': 'report', 'report-component': 'report',
+            'posted-content': 'article', 'dataset': 'dataset', 'reference-entry': 'entry-encyclopedia',
+            'dissertation': 'thesis', 'standard': 'standard', 'peer-review': 'review'}
+# CSL types whose journal, book, site, gazette or programme is a container-title; the others have a publisher.
+CONTAINER = {'article', 'article-journal', 'article-magazine', 'article-newspaper', 'chapter', 'paper-conference',
+             'entry', 'entry-dictionary', 'entry-encyclopedia', 'webpage', 'post', 'post-weblog', 'broadcast',
+             'legislation', 'legal_case'}
 # OpenAlex open-access statuses meaning that a free copy exists somewhere.
 OPEN = {'gold', 'hybrid', 'bronze', 'green', 'diamond'}
 
 
-# ====================================================================== the CSV (master record)
-def read_rows(path=None):
-    """Read bibliography.csv. Returns (column names in file order, list of rows as dicts of strings)."""
-    path = path or os.path.join(LIT, CSV_NAME)
-    with open(path, encoding='utf-8-sig', newline='') as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-        return list(reader.fieldnames or []), rows
+def say(*parts):
+    """A message for the user: standard output, or standard error when --json keeps standard output for the
+    JSON result."""
+    print(*parts, file=sys.stderr if JSON else sys.stdout, flush=True)
 
 
-def sort_key(row):
-    """Row order of the CSV: first author (ASCII-folded, lower case), then year, then key."""
-    return fold(row.get('authors')), row.get('year') or '', row.get('key') or ''
+class Refused(Exception):
+    """The command cannot run as asked: a DOI or key that does not fit, no library, an unreadable record.
+    Exit code 2."""
 
 
-def write_rows(rows, fields, path=None):
-    """Write bibliography.csv: UTF-8 with BOM, columns in the order read (any column of COLUMNS missing
-    from the file is appended), rows sorted by sort_key. Written to a temporary file and then renamed,
-    so an interruption never leaves a half-written CSV."""
-    path = path or os.path.join(LIT, CSV_NAME)
-    fields = list(fields) + [c for c in COLUMNS if c not in fields]
+class Unreachable(Exception):
+    """A source the command needs could not be reached. Exit code 3."""
+
+
+# ====================================================================== the record
+def read_entries(path=None):
+    """Read bibliography.json: the list of its entries. A file that is not a JSON array of objects each with an
+    id (a merge conflict left in it, a hand edit gone wrong) is refused with the line and column where JSON
+    stops."""
+    path = path or os.path.join(LIT, RECORD)
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise Refused(f'{path} is not valid JSON: {e.msg} at line {e.lineno}, column {e.colno}') from None
+    if not isinstance(data, list) or not all(isinstance(e, dict) and isinstance(e.get('id'), str) and e['id']
+                                             for e in data):
+        raise Refused(f'{path} is not a list of entries each with an id')
+    return data
+
+
+def sort_key(entry):
+    """Entry order of the record: the id, ASCII-folded and in lower case, then as written."""
+    return fold(entry['id']), entry['id']
+
+
+def canonical(entry):
+    """The entry as the script writes it: the fields of FIELDS in their order, then any other field as found;
+    in custom, the keys of CUSTOM first. A managed field or custom key left empty is dropped."""
+    e = dict(entry)
+    if isinstance(e.get('custom'), dict):
+        c = e['custom']
+        e['custom'] = {**{k: c[k] for k in CUSTOM if c.get(k)}, **{k: v for k, v in c.items() if k not in CUSTOM}}
+    out = {k: e[k] for k in FIELDS if k in e and e[k] not in ('', None, [], {})}
+    out.update((k, v) for k, v in e.items() if k not in FIELDS)
+    return out
+
+
+def dump(entries):
+    """The record's text: entries sorted by id, each in canonical form, indented by two spaces (Python's own
+    json layout, so that any tool writes it the same way), characters as they are, a final newline."""
+    return json.dumps([canonical(e) for e in sorted(entries, key=sort_key)], ensure_ascii=False, indent=2) + '\n'
+
+
+def write_entries(entries, path=None):
+    """Write bibliography.json: UTF-8 without a byte order mark, LF line ends. Written to a temporary file and
+    then renamed, so an interruption never leaves a half-written record."""
+    path = path or os.path.join(LIT, RECORD)
     tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8-sig', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fields, restval='')
-        writer.writeheader()
-        writer.writerows(sorted(rows, key=sort_key))
+    with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(dump(entries))
     os.replace(tmp, path)
+
+
+def doi_of(entry):
+    """The entry's DOI in lower case ('' without one)."""
+    return (entry.get('DOI') or '').lower()
+
+
+def year_in(entry):
+    """The year of the entry's issued date ('' without one)."""
+    try:
+        return str(entry['issued']['date-parts'][0][0])
+    except (KeyError, TypeError, IndexError):
+        return ''
+
+
+def container(entry):
+    """The journal, book, site or publisher of an entry, for a Markdown header and the table of list."""
+    return entry.get('container-title') or entry.get('publisher') or ''
+
+
+def project(entry):
+    """The entry's custom object, where the project's own fields live ({} when it has none)."""
+    return entry.get('custom') if isinstance(entry.get('custom'), dict) else {}
+
+
+def name_text(n):
+    """One CSL name as text: 'Given Family', or the literal name."""
+    return n.get('literal') or ' '.join(x for x in (n.get('given'), n.get('family')) if x)
+
+
+def names_line(entry, n=3):
+    """The first authors of an entry as 'Family Initials', then 'et al.': for messages and the table of list."""
+    out = []
+    for a in entry.get('author') or []:
+        ini = ''.join(p[0] for p in re.split(r'[\s\-.]+', a.get('given') or '') if p)
+        out.append(a.get('literal') or f'{a.get("family", "")} {ini}'.strip())
+    return ', '.join(out[:n]) + (', et al.' if len(out) > n else '')
 
 
 def normalise_license(s):
@@ -284,9 +393,12 @@ def _get_following(url, headers, timeout, allow_redirects, **kw):
         return r
 
 
+FAILED = set()      # endpoint names whose last request got no answer (no connection, or 429 or 5xx twice)
+
+
 def get(url, name, throttle, timeout=40, allow_redirects=True, **kw):
     """GET with throttling and one retry on 429 or 5xx. Returns a Response, or None on failure or when
-    the URL (or a redirect) points to a refused host."""
+    the URL (or a redirect) points to a refused host. An endpoint that gives no answer is noted in FAILED."""
     headers = kw.pop('headers', UA)
     r = None
     for attempt in range(2):
@@ -294,13 +406,15 @@ def get(url, name, throttle, timeout=40, allow_redirects=True, **kw):
         try:
             r = _get_following(url, headers, timeout, allow_redirects, **kw)
         except RefusedHost as e:
-            print(f'    not requested: {e} (ScienceDirect, Wiley or an institutional login)')
+            say(f'    not requested: {e} (ScienceDirect, Wiley or an institutional login)')
             return None
         except requests.RequestException:
             r = None
         if r is not None and r.status_code not in (429, 500, 502, 503, 504):
+            FAILED.discard(name)
             return r
         time.sleep(5 * (attempt + 1))
+    FAILED.add(name)
     return r
 
 
@@ -454,10 +568,10 @@ def make_surname_year(meta, taken):
 SURNAME_YEAR = re.compile(r'^[A-Z][A-Za-z-]*_(\d{4}|nd)[a-z]?$')
 
 
-def key_style(rows):
+def key_style(entries):
     """The key form of a library: 'surname_year' when it is empty or when at least half of its keys have
     that form, otherwise 'citekey'. The keys already in the library are never renamed."""
-    keys = [r.get('key') or '' for r in rows if r.get('key')]
+    keys = [e.get('id') or '' for e in entries if e.get('id')]
     if not keys or 2 * sum(bool(SURNAME_YEAR.match(k)) for k in keys) >= len(keys):
         return 'surname_year'
     return 'citekey'
@@ -468,27 +582,17 @@ def make_key(meta, taken, style='surname_year'):
     return make_citekey(meta, taken) if style == 'citekey' else make_surname_year(meta, taken)
 
 
-def authors_short(meta, n=3):
-    """The authors column: 'Family Initials' of the first three authors, then 'et al.'; the publisher
-    when there is no author."""
-    names = []
-    for a in meta.get('author') or []:
-        fam = a.get('family') or a.get('name') or ''
-        ini = ''.join(p[0] for p in re.split(r'[\s\-.]+', a.get('given') or '') if p)
-        names.append((fam + ' ' + ini).strip())
-    if not names:
-        return u(meta.get('publisher'))
-    return ', '.join(names[:n]) + (', et al.' if len(names) > n else '')
-
-
-def authors_full(meta):
-    """The authors_full column: every author as 'Family, Given' (or the single name Crossref has),
-    separated by '; '."""
+def csl_names(meta):
+    """The authors of a Crossref record as CSL names: family and given names, or one literal name for an
+    organisation or a person Crossref records with a single name."""
     out = []
     for a in meta.get('author') or []:
         fam, given, name = (ws(a.get(k)).strip() for k in ('family', 'given', 'name'))
-        out.append(f'{fam}, {given}' if fam and given else (fam or name))
-    return '; '.join(x for x in out if x)
+        if fam and given:
+            out.append({'family': fam, 'given': given})
+        elif fam or name:
+            out.append({'literal': fam or name})
+    return out
 
 
 def retraction(meta):
@@ -497,22 +601,39 @@ def retraction(meta):
     return ', '.join(sorted(set(k for k in kinds if k)))
 
 
-def row_from_meta(key, doi, meta):
-    """A new CSV row for a work with a DOI, filled from its Crossref (or Europe PMC) record."""
-    row = {c: '' for c in COLUMNS}
-    row.update(key=key, authors=authors_short(meta), year=year_of(meta), title=u(title_of(meta)),
-               source=u((meta.get('container-title') or [''])[0]) or u(meta.get('publisher')),
-               kind=KIND.get(meta.get('type'), meta.get('type') or ''), full_text='no', doi=doi,
-               url=f'https://doi.org/{doi}', volume=str(meta.get('volume') or ''),
-               issue=str(meta.get('issue') or ''), pages=str(meta.get('page') or ''),
-               update_notice=retraction(meta), authors_full=authors_full(meta))
-    return row
+def entry_from_meta(key, doi, meta):
+    """A new entry for a work with a DOI, from its Crossref (or Europe PMC) record: the CSL type, the title
+    with its subtitle, the language when it is not English, the authors, the year, the journal (or the book,
+    site or programme) or else the publisher, volume, issue, page and DOI."""
+    typ = CSL_TYPE.get(meta.get('type'), 'document')
+    e = {'id': key, 'type': typ, 'title': u(full_title(meta))}
+    lang = (meta.get('language') or '').strip()
+    if lang and not lang.lower().startswith('en'):
+        e['language'] = lang
+    if csl_names(meta):
+        e['author'] = csl_names(meta)
+    if year_of(meta).isdigit():
+        e['issued'] = {'date-parts': [[int(year_of(meta))]]}
+    src, pub = u((meta.get('container-title') or [''])[0]), u(meta.get('publisher'))
+    if typ in CONTAINER:
+        if src:
+            e['container-title'] = src
+        if pub and typ in ('chapter', 'paper-conference'):
+            e['publisher'] = pub
+    elif pub or src:
+        e['publisher'] = pub or src
+    for var in ('volume', 'issue', 'page'):
+        if meta.get(var):
+            e[var] = str(meta[var])
+    e['DOI'] = doi
+    return e
 
 
-def first_family(row):
-    """Family name of the first author of a row (for matching other versions of the work)."""
-    first = (row.get('authors_full') or '').split('; ')[0]
-    return first.split(', ')[0] if first else ''
+def first_family(entry):
+    """Family name of the first author of an entry, or its literal name (for matching other versions of the
+    work)."""
+    first = (entry.get('author') or [{}])[0]
+    return first.get('family') or first.get('literal') or ''
 
 
 # ====================================================================== abstracts
@@ -524,25 +645,6 @@ def clean_abstract(s):
     s = re.sub(r'<[^>]+>', ' ', s or '')
     s = re.sub(r'\s+', ' ', s).strip()
     return re.sub(r'^(Abstract|ABSTRACT|Summary)[:.]?\s+', '', s)
-
-
-def jats_abstract(content):
-    """Plain-text abstract from JATS XML (bytes), keeping the headings of a structured abstract."""
-    root = etree.fromstring(content, PARSER)
-    for ab in root.iter('{*}abstract', 'abstract'):
-        if ab.get('abstract-type') not in (None, 'abstract', 'structured'):
-            continue
-        secs = [s for s in ab if etree.QName(s).localname == 'sec']
-        if secs:
-            parts = []
-            for s in secs:
-                title = ''.join(s.findtext('{*}title') or s.findtext('title') or '').strip()
-                body = ' '.join(''.join(p.itertext()) for p in s if etree.QName(p).localname == 'p')
-                parts.append((title + ': ' if title else '') + clean_abstract(body))
-            return ' '.join(parts)
-        return clean_abstract(' '.join(''.join(p.itertext()) for p in ab if etree.QName(p).localname == 'p')
-                              or ''.join(ab.itertext()))
-    return None
 
 
 def crossref_abstract(doi):
@@ -560,29 +662,9 @@ def s2_abstract(doi):
     return clean_abstract(r.json().get('abstract')) or None
 
 
-def abstract_from_markdown(text):
-    """The abstract paragraph of a full-text Markdown (from a PDF or a saved web page): the text after an
-    'Abstract' marker, up to the keywords or the introduction. None for abstract-only files."""
-    if 'text_source: "full text' not in (text or '')[:1500]:
-        return None
-    t = text.split('---', 2)[-1]
-    for m in re.finditer(r'(?is)\ba\s?b\s?s\s?t\s?r\s?a\s?c\s?t\b[\s:*_#]*(.{200,3500}?)'
-                         r'(?=\n#+\s|\bkey\s?words?\b|\n\s*\**\s*(?:1\.?\s*)?introduction\b)', t):
-        s = m.group(1)
-        if '](' in s[:300]:                     # a page's table of contents, not the abstract
-            continue
-        return clean_abstract(re.sub(r'[*_#>|]', ' ', s))
-    return None
-
-
-def choose_abstract(doi, rec, md_text=None):
-    """(abstract, source) in the order of preference used to build the library: the JATS full text,
-    Europe PMC or OpenAlex, Crossref, Semantic Scholar, and last the full-text Markdown. (None, None)
-    when none has one."""
-    if rec.get('jats'):
-        a = jats_abstract(rec['jats'])
-        if a:
-            return a, 'full text (JATS)'
+def choose_abstract(doi, rec):
+    """(abstract, source) of a work whose full text was not found, in order of preference: Europe PMC or
+    OpenAlex (already in rec), Crossref, Semantic Scholar. (None, None) when none has one."""
     if rec.get('abstract'):
         return clean_abstract(rec['abstract']), 'Europe PMC / OpenAlex'
     a = crossref_abstract(doi)
@@ -591,9 +673,6 @@ def choose_abstract(doi, rec, md_text=None):
     a = s2_abstract(doi)
     if a:
         return a, 'Semantic Scholar'
-    a = abstract_from_markdown(md_text) if md_text else None
-    if a:
-        return a, 'full text (PDF or web page)'
     return None, None
 
 
@@ -1045,20 +1124,13 @@ def set_header_fields(header, values):
     return header
 
 
-def authors_for_header(row):
-    """Author names for a new Markdown header: 'Given Family' from authors_full, else the authors column."""
-    if row.get('authors_full'):
-        return [' '.join(reversed(a.split(', ', 1))) for a in row['authors_full'].split('; ')]
-    return [a.strip() for a in (row.get('authors') or '').split(',') if a.strip()]
-
-
-def front_matter(row, source):
-    """YAML header of a new Markdown file, so that the file can be read without the index."""
-    authors = authors_for_header(row)
-    lines = ['---', f'key: {row["key"]}', f'title: {yaml_str(row["title"])}',
+def front_matter(entry, source, license=''):
+    """YAML header of a new Markdown file, so that the file can be read without the record."""
+    authors = [name_text(a) for a in entry.get('author') or []]
+    lines = ['---', f'key: {entry["id"]}', f'title: {yaml_str(entry.get("title"))}',
              'authors: [' + ', '.join(yaml_str(a) for a in authors[:30]) + (', "et al."' if len(authors) > 30 else '') + ']',
-             f'year: {row["year"]}', f'journal: {yaml_str(row["source"])}', f'doi: {row["doi"]}',
-             f'pmid: {row["pmid"]}', f'pmcid: {row["pmcid"]}', f'license: {yaml_str(row["license"])}',
+             f'year: {year_in(entry)}', f'journal: {yaml_str(container(entry))}', f'doi: {entry.get("DOI", "")}',
+             f'pmid: {entry.get("PMID", "")}', f'pmcid: {entry.get("PMCID", "")}', f'license: {yaml_str(license)}',
              f'text_source: {yaml_str(source)}', '---', '']
     return '\n'.join(lines)
 
@@ -1068,31 +1140,36 @@ def read_text(path):
         return f.read()
 
 
-def write_markdown(row, body, source, lit=None):
-    """Write <key>.md: YAML header, '# title', body. An existing file keeps its header and title line,
-    with text_source, pmid, pmcid and license brought up to date from the row; a new file gets a header
-    built from the row. Sets the row's md column."""
-    path = os.path.join(lit or LIT, row['key'] + '.md')
+def write_markdown(entry, body, source, license=None, lit=None):
+    """Write <key>.md: YAML header, '# title', body. An existing file keeps its header and title line, with
+    text_source, pmid and pmcid brought up to date from the entry, and the licence when one is given; a new
+    file gets a header built from the entry."""
+    path = os.path.join(lit or LIT, entry['id'] + '.md')
     old = read_text(path) if os.path.exists(path) else ''
     m = HEADER_RE.match(old)
     if m:
-        head = set_header_fields(m.group(0), {'pmid': row['pmid'], 'pmcid': row['pmcid'],
-                                              'license': yaml_str(row['license']), 'text_source': yaml_str(source)})
+        fields = {'pmid': entry.get('PMID', ''), 'pmcid': entry.get('PMCID', ''), 'text_source': yaml_str(source)}
+        if license is not None:
+            fields['license'] = yaml_str(license)
+        head = set_header_fields(m.group(0), fields)
         first = old[m.end():].split('\n', 1)[0]
-        title_line = first if first.startswith('# ') else '# ' + row['title']
+        title_line = first if first.startswith('# ') else '# ' + entry.get('title', '')
     else:
-        head, title_line = front_matter(row, source), '# ' + row['title']
+        head, title_line = front_matter(entry, source, license or ''), '# ' + entry.get('title', '')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(head + title_line + '\n\n' + body.strip() + '\n')
-    row['md'] = row['key'] + '.md'
 
 
-def summary_body(row):
-    """(body, text_source) of a Markdown without full text: the abstract when the row has one,
-    otherwise the metadata only."""
-    if row.get('text_type') == 'abstract' and row.get('abstract_or_summary'):
-        return '## Abstract\n\n' + row['abstract_or_summary'], 'abstract only (full text not retrieved)'
+def summary_body(entry):
+    """(body, text_source) of a Markdown with neither full text nor abstract: the summary written for the
+    work, otherwise the metadata only."""
+    if project(entry).get('summary'):
+        return '## Summary\n\n' + project(entry)['summary'], 'summary only (written for the project)'
     return '', 'metadata only (full text and abstract not retrieved)'
+
+
+# What a <key>.md can hold, as the start of its text_source.
+HELD = ('full text', 'abstract only', 'summary only', 'metadata only')
 
 
 # Markdown made from a source the library no longer stores (JATS XML, a saved web page): rewriting it
@@ -1102,8 +1179,8 @@ IRREPLACEABLE = ('full text, JATS XML', 'full text, article web page')
 
 def full_text_here(key, lit=None):
     """True if the library folder holds the full text of a work: <key>.pdf, or a <key>.md whose header says
-    it holds the full text (one made from JATS XML or a web page has no PDF). Decided from the files, never
-    from the full_text column: a fresh clone receives the CSV as the owner's machine wrote it, without the files."""
+    it holds the full text (one made from JATS XML or a web page has no PDF). Decided from the files, which
+    are the only witness of what one machine holds."""
     lit = lit or LIT
     if os.path.exists(os.path.join(lit, key + '.pdf')):
         return True
@@ -1111,23 +1188,31 @@ def full_text_here(key, lit=None):
     return os.path.exists(md) and header_value(read_text(md), 'text_source').startswith('full text')
 
 
-def mark_full_text(row, lit=None):
-    """Full text is here: set full_text, access and the pdf column."""
-    row['full_text'], row['access'] = 'yes', 'open'
-    row['pdf'] = row['key'] + '.pdf' if os.path.exists(os.path.join(lit or LIT, row['key'] + '.pdf')) else ''
+def text_held(key, lit=None):
+    """What the folder holds of a work: 'full text', 'abstract only', 'summary only', 'metadata only', or
+    'none' when it has no Markdown and no PDF."""
+    lit = lit or LIT
+    if full_text_here(key, lit):
+        return 'full text'
+    md = os.path.join(lit, key + '.md')
+    if not os.path.exists(md):
+        return 'none'
+    src = header_value(read_text(md), 'text_source')
+    return next((h for h in HELD if src.startswith(h)), 'metadata only')
 
 
-def apply_retrieval(row, rec, note=None):
-    """Bring a row, and its Markdown, up to date with what retrieve() found."""
-    key = row['key']
-    for col in ('pmid', 'pmcid'):
-        if rec.get(col) and not row[col]:
-            row[col] = str(rec[col])
-    if rec.get('license') and not row['license']:
-        row['license'] = normalise_license(rec['license'])
-    full = bool(rec['pdf'] or rec['jats'])
-    md_text = None
-    if full:                                    # full text: JATS preferred, the PDF when the XML is thin
+def apply_retrieval(entry, rec, note=None):
+    """Bring an entry's identifiers and its Markdown up to date with what retrieve() found: the full text when
+    a copy was found (JATS preferred, the PDF when the XML is thin), otherwise the abstract, otherwise the
+    summary (a --note becomes the summary) or the metadata. A Markdown that already holds the abstract is
+    kept. The licence goes into the Markdown's header. Returns what the Markdown now holds (its text_source)."""
+    key = entry['id']
+    for var, col in (('PMID', 'pmid'), ('PMCID', 'pmcid')):
+        if rec.get(col) and not entry.get(var):
+            entry[var] = str(rec[col])
+    lic = normalise_license(rec.get('license') or '')
+    path = os.path.join(LIT, key + '.md')
+    if rec['pdf'] or rec['jats']:
         pdf = os.path.join(LIT, key + '.pdf')
         if rec['jats']:
             body, source = jats_to_md(rec['jats']), f'full text, JATS XML ({rec["xml"]})'
@@ -1135,110 +1220,114 @@ def apply_retrieval(row, rec, note=None):
                 body, source = pdf_to_md(pdf), f'full text, PDF ({rec["pdf"]})'
         else:
             body, source = pdf_to_md(pdf), f'full text, PDF ({rec["pdf"]})'
-        write_markdown(row, body, source)
-        mark_full_text(row)
-        md_text = read_text(os.path.join(LIT, key + '.md'))
+        write_markdown(entry, body, source, lic)
+        if note:
+            say(f'  --note not used: {key} has its full text')
+        return source
+    old = header_value(read_text(path), 'text_source') if os.path.exists(path) else ''
+    if old.startswith('abstract only'):
+        if note:
+            say(f'  --note not used: {key} has an abstract')
+        return old
+    abstract, src = choose_abstract(entry['DOI'], rec) if entry.get('DOI') else (None, None)
+    if abstract:
+        write_markdown(entry, '## Abstract\n\n' + abstract, f'abstract only, from {src} (full text not retrieved)', lic)
+        if note:
+            say(f'  --note not used: {key} has an abstract')
     else:
-        # no full text here: a row copied from another machine (a fresh clone) may still say yes and name a PDF
-        row['full_text'], row['pdf'] = 'no', ''
-        oa = rec.get('oa_status')
-        if oa:
-            row['access'] = 'open, host blocks download' if oa in OPEN else 'closed'
-    if row['doi'] and row['text_type'] != 'abstract':          # abstract, when the row has none yet
-        found, src = choose_abstract(row['doi'], rec, md_text)
-        if found:
-            row.update(abstract_or_summary=found, text_type='abstract', text_source=src)
-        elif not row['abstract_or_summary']:
-            if note:
-                row.update(abstract_or_summary=note, text_type='description', text_source='written by hand')
-            else:
-                row['text_source'] = 'no abstract in open sources'
-    if note and row['abstract_or_summary'] != note:
-        print(f'  --note not used: {key} has an abstract')
-    if not full:                                # abstract-only or metadata-only Markdown
-        path = os.path.join(LIT, key + '.md')
-        src = header_value(read_text(path), 'text_source') if os.path.exists(path) else ''
-        if not src or (src.startswith('metadata only') and row['text_type'] == 'abstract'):
-            write_markdown(row, *summary_body(row))
+        if note:
+            entry.setdefault('custom', {})['summary'] = note
+        write_markdown(entry, *summary_body(entry), lic)
+    return header_value(read_text(path), 'text_source')
 
 
 def print_tried(rec):
     for what, outcome in rec['tried']:
-        print(f'    {what}: {outcome}')
+        say(f'    {what}: {outcome}')
 
 
 # ====================================================================== add
 def cmd_add(args):
     """Add one work by its DOI."""
-    fields, rows = read_rows()
+    entries = read_entries()
     doi = clean_doi(args.doi)
     if not doi:
-        sys.exit(f'not a DOI: {args.doi}')
-    same = [r['key'] for r in rows if r['doi'] == doi]
+        raise Refused(f'not a DOI: {args.doi}')
+    same = [e['id'] for e in entries if doi_of(e) == doi]
     if same:
-        sys.exit(f'{doi} is already in the library as {same[0]}')
+        raise Refused(f'{doi} is already in the library as {same[0]}')
     if args.pdf and not os.path.isfile(args.pdf):
-        sys.exit(f'no such file: {args.pdf}')
+        raise Refused(f'no such file: {args.pdf}')
     meta = crossref(doi) or epmc_meta(doi)
     if not meta:
-        sys.exit(f'{doi}: not found on Crossref or Europe PMC')
+        if {'crossref', 'epmc'} <= FAILED:
+            raise Unreachable(f'{doi}: neither Crossref nor Europe PMC answered')
+        raise Refused(f'{doi}: not found on Crossref or Europe PMC')
     if args.title and not title_accepted(meta, args.title):
-        sys.exit(f'{doi}: the registered title does not match the one given\n'
-                 f'  registered: {full_title(meta)}\n  given:      {args.title}')
-    taken = {r['key'] for r in rows}
+        raise Refused(f'{doi}: the registered title does not match the one given\n'
+                      f'  registered: {full_title(meta)}\n  given:      {args.title}')
+    taken = {e['id'] for e in entries}
     if args.key and args.key in taken:
-        sys.exit(f'the key {args.key} is already in the library')
-    key = args.key or make_key(meta, taken, key_style(rows))
-    row = row_from_meta(key, doi, meta)
-    row['cited_in'] = args.cited_in or ''
-    print(f'{key}: {row["title"]} ({row["authors"]}, {row["year"]})')
+        raise Refused(f'the key {args.key} is already in the library')
+    key = args.key or make_key(meta, taken, key_style(entries))
+    entry = entry_from_meta(key, doi, meta)
+    if args.cited_in:
+        entry['custom'] = {'cited_in': args.cited_in}
+    say(f'{key}: {entry["title"]} ({names_line(entry)}, {year_in(entry)})')
+    notice = retraction(meta)
+    if notice:
+        say(f'  Crossref records an update to this work: {notice}')
 
     rec = new_record()
     if args.pdf:                                # a PDF supplied by hand wins over every other source
         with open(args.pdf, 'rb') as f:
-            if not save_pdf(f.read(), key, row['title'], 'supplied by hand', rec):
-                print(f'  {args.pdf} not filed ({rec["tried"][-1][1]}); if it is this paper, copy it as '
-                      f'{key}.pdf into the library and run: literature.py md {key}')
-    retrieve(doi, key, row['title'], first_family(row), rec)
-    apply_retrieval(row, rec, note=args.note)
-    rows.append(row)
-    write_rows(rows, fields)
+            if not save_pdf(f.read(), key, entry['title'], 'supplied by hand', rec):
+                say(f'  {args.pdf} not filed ({rec["tried"][-1][1]}); if it is this paper, copy it as '
+                    f'{key}.pdf into the library and run: literature.py md {key}')
+    retrieve(doi, key, entry['title'], first_family(entry), rec)
+    text = apply_retrieval(entry, rec, note=args.note)
+    entries.append(entry)
+    write_entries(entries)
     print_tried(rec)
-    print(f'{key}: added; full text {row["full_text"]}, access "{row["access"]}", '
-          f'text "{row["text_type"] or "none"}" ({row["text_source"]})')
+    say(f'{key}: added; {text}; open-access status {rec["oa_status"] or "unknown"}')
+    return 0, {'added': canonical(entry), 'text': text, 'oa_status': rec['oa_status'], 'update_notice': notice,
+               'tried': rec['tried']}
 
 
 # ====================================================================== fetch
 def cmd_fetch(args):
     """Retry the open-access sources for works whose full text is not in the folder (all of them, or the
-    keys given). The folder decides, not the full_text column, so that in a fresh clone, which has the CSV
-    and none of the files, fetch downloads the open-access copies again and writes their Markdown."""
-    fields, rows = read_rows()
-    by_key = {r['key']: r for r in rows}
+    keys given), writing the full text or the abstract into their Markdown. The folder decides what is
+    missing, so that in a fresh clone, which has the record and none of the files, fetch downloads the
+    open-access copies again and writes every Markdown."""
+    entries = read_entries()
+    by_key = {e['id']: e for e in entries}
     unknown = [k for k in args.keys if k not in by_key]
     if unknown:
-        sys.exit('unknown keys: ' + ', '.join(unknown))
+        raise Refused('unknown keys: ' + ', '.join(unknown))
     targets = [by_key[k] for k in args.keys] if args.keys else \
-        [r for r in rows if r['doi'] and not full_text_here(r['key'])]
-    found = []
-    for i, row in enumerate(targets, 1):
-        key = row['key']
-        if not row['doi']:
-            print(f'{key}: no DOI, nothing to search')
+        [e for e in entries if e.get('DOI') and not full_text_here(e['id'])]
+    results = []
+    for i, entry in enumerate(targets, 1):
+        key = entry['id']
+        if not entry.get('DOI'):
+            say(f'{key}: no DOI, nothing to search')
             continue
         if full_text_here(key):
-            print(f'{key}: already has its full text')
+            say(f'{key}: already has its full text')
             continue
-        rec = retrieve(row['doi'], key, row['title'], first_family(row), new_record())
-        apply_retrieval(row, rec)
-        write_rows(rows, fields)                # after every work, so an interruption loses nothing
+        rec = retrieve(entry['DOI'], key, entry['title'], first_family(entry), new_record())
+        text = apply_retrieval(entry, rec)
+        write_entries(entries)                  # after every work, so an interruption loses nothing
         ok = bool(rec['pdf'] or rec['jats'])
-        print(f'{i}/{len(targets)} {key}: {"full text found" if ok else "no free copy"}', flush=True)
+        say(f'{i}/{len(targets)} {key}: {"full text found" if ok else "no free copy"}')
         if not ok:
             print_tried(rec)
-        else:
-            found.append(key)
-    print(f'done: {len(found)} new full texts', found)
+        results.append({'id': key, 'full_text': ok, 'text': text, 'oa_status': rec['oa_status'],
+                        'tried': rec['tried']})
+    found = [r['id'] for r in results if r['full_text']]
+    say(f'done: {len(found)} new full texts', found)
+    return 0, {'results': results, 'found': found}
 
 
 # ====================================================================== collect
@@ -1252,16 +1341,18 @@ def cmd_collect(args):
     A PDF is filed only if it contains the work's title on its first pages (60 % of the word pairs) and
     has more than two pages (a publisher preview usually has one or two); it is then moved into the
     library as <key>.pdf and its Markdown written. An HTML page is converted to <key>.md and left where
-    it is. Files that fail stay where they are and are reported."""
-    fields, rows = read_rows()
-    by_key = {r['key']: r for r in rows}
-    by_doi = {r['doi']: r['key'] for r in rows if r['doi']}
+    it is. Files that fail stay where they are and are reported. The record does not change: only the
+    folder does."""
+    entries = read_entries()
+    by_key = {e['id']: e for e in entries}
+    by_doi = {doi_of(e): e['id'] for e in entries if doi_of(e)}
 
     def has_pdf(k):
         return os.path.exists(os.path.join(LIT, k + '.pdf'))
 
     # candidates for identification by title: works without a PDF whose title is long enough to be distinctive
-    missing = [k for k, r in by_key.items() if not has_pdf(k) and len(re.findall(r'[a-z0-9]+', fold(r['title']))) >= 5]
+    missing = [k for k, e in by_key.items()
+               if not has_pdf(k) and len(re.findall(r'[a-z0-9]+', fold(e.get('title')))) >= 5]
     moved, rejected = [], []
     for name in sorted(os.listdir(args.src)):
         key, ext = os.path.splitext(name)
@@ -1270,16 +1361,15 @@ def cmd_collect(args):
             continue
         src = os.path.join(args.src, name)
         if ext == '.html':                      # article page saved from the browser
-            row = by_key[key]
-            if row['full_text'] == 'yes':
+            entry = by_key[key]
+            if full_text_here(key):
                 continue
             text = read_text_lenient(src)
-            score = pairs_found(row['title'], re.sub(r'<[^>]+>', ' ', text))
+            score = pairs_found(entry['title'], re.sub(r'<[^>]+>', ' ', text))
             if score < 0.6:
                 rejected.append((name, f'title match {score:.2f}'))
                 continue
-            write_markdown(row, html_to_md(src), 'full text, article web page (browser)')
-            mark_full_text(row)
+            write_markdown(entry, html_to_md(src), 'full text, article web page (browser)')
             moved.append(f'{name} -> {key}.md (the page can now be deleted)')
             continue
         try:
@@ -1301,29 +1391,23 @@ def cmd_collect(args):
             if name == key + '.pdf':
                 rejected.append((name, 'the library already has this PDF'))
             continue
-        row = by_key[key]
-        score = pairs_found(row['title'], text)
+        entry = by_key[key]
+        score = pairs_found(entry['title'], text)
         if score < 0.6 or pages <= 2:
             rejected.append((name, f'title match {score:.2f}, {pages} pages'))
             continue
         shutil.move(src, os.path.join(LIT, key + '.pdf'))
-        mark_full_text(row)
         md = os.path.join(LIT, key + '.md')
         src_md = header_value(read_text(md), 'text_source') if os.path.exists(md) else ''
         if not src_md.startswith(IRREPLACEABLE):   # a Markdown from JATS or a web page is better: keep it
-            write_markdown(row, pdf_to_md(os.path.join(LIT, key + '.pdf')), 'full text, PDF (browser (user session))')
-        if row['doi'] and row['text_type'] != 'abstract':   # an abstract read from the new full text
-            found = abstract_from_markdown(read_text(md))
-            if found:
-                row.update(abstract_or_summary=found, text_type='abstract', text_source='full text (PDF or web page)')
+            write_markdown(entry, pdf_to_md(os.path.join(LIT, key + '.pdf')), 'full text, PDF (browser (user session))')
         moved.append(f'{name} -> {key}.pdf')
-    if moved:
-        write_rows(rows, fields)
-    print('filed', len(moved))
+    say('filed', len(moved))
     for m in moved:
-        print('  ' + m)
+        say('  ' + m)
     for n, why in rejected:
-        print('REJECTED', n, why)
+        say('REJECTED', n, why)
+    return 0, {'filed': moved, 'rejected': [list(r) for r in rejected]}
 
 
 def read_text_lenient(path):
@@ -1333,173 +1417,237 @@ def read_text_lenient(path):
 
 # ====================================================================== md
 def cmd_md(args):
-    """(Re)write Markdown files. With keys: those works. Without: every work whose Markdown is missing or
-    stale (a PDF exists and the Markdown holds only the abstract or the metadata, or is older than the PDF).
-    A Markdown made from JATS XML or a web page is kept unless --force is given, because its source is
-    no longer stored. A reference without a DOI gets a Markdown only from a PDF."""
-    fields, rows = read_rows()
-    by_key = {r['key']: r for r in rows}
+    """(Re)write Markdown files from the PDFs. With keys: those works. Without: every work whose Markdown is
+    missing, or stale next to its PDF (it holds less than the full text, or is older than the PDF). A work
+    without a PDF gets a missing Markdown from its summary or its metadata and keeps an existing one, which
+    may hold the abstract fetch found. A Markdown made from JATS XML or a web page is kept unless --force is
+    given, because its source is no longer stored. The record does not change."""
+    entries = read_entries()
+    by_key = {e['id']: e for e in entries}
     unknown = [k for k in args.keys if k not in by_key]
     if unknown:
-        sys.exit('unknown keys: ' + ', '.join(unknown))
-    written, kept = [], 0
-    for row in ([by_key[k] for k in args.keys] if args.keys else rows):
-        key = row['key']
+        raise Refused('unknown keys: ' + ', '.join(unknown))
+    written, kept = [], []
+    for entry in ([by_key[k] for k in args.keys] if args.keys else entries):
+        key = entry['id']
         pdf, md = os.path.join(LIT, key + '.pdf'), os.path.join(LIT, key + '.md')
         src = header_value(read_text(md), 'text_source') if os.path.exists(md) else ''
-        if not row['doi'] and not os.path.exists(pdf):
-            if args.keys:
-                print(f'{key}: no DOI and no PDF, nothing to write')
-            continue
         if src.startswith(IRREPLACEABLE) and not args.force:
-            kept += 1
+            kept.append(key)
             if args.keys:
-                print(f'{key}: kept, its Markdown comes from {src.split(" (")[0][len("full text, "):]} (use --force to rewrite it)')
+                say(f'{key}: kept, its Markdown comes from {src.split(" (")[0][len("full text, "):]} (use --force to rewrite it)')
             continue
-        if not args.keys and os.path.exists(md):
-            stale = os.path.exists(pdf) and (src.startswith(('abstract only', 'metadata only'))
-                                             or os.path.getmtime(md) < os.path.getmtime(pdf))
-            if not stale:
-                kept += 1
-                continue
         if os.path.exists(pdf):
+            if not args.keys and os.path.exists(md) and src.startswith('full text') \
+                    and os.path.getmtime(md) >= os.path.getmtime(pdf):
+                kept.append(key)
+                continue
             m = re.match(r'full text, PDF \((.*)\)$', src)
-            write_markdown(row, pdf_to_md(pdf), f'full text, PDF ({m.group(1) if m else "source not recorded"})')
-            mark_full_text(row)
+            write_markdown(entry, pdf_to_md(pdf), f'full text, PDF ({m.group(1) if m else "source not recorded"})')
+        elif not os.path.exists(md):
+            write_markdown(entry, *summary_body(entry))
         else:
-            write_markdown(row, *summary_body(row))
-            row['full_text'] = 'no'
+            kept.append(key)
+            if args.keys:
+                say(f'{key}: no PDF, its Markdown is kept (fetch looks for the text again)')
+            continue
         written.append(key)
-    write_rows(rows, fields)
-    print(f'written {len(written)}: {", ".join(written)} | kept {kept}')
+    say(f'written {len(written)}: {", ".join(written)} | kept {len(kept)}')
+    return 0, {'written': written, 'kept': kept}
 
 
 # ====================================================================== check
 def check_problems(lit=None):
-    """List of consistency problems between bibliography.csv and the files of the library folder."""
+    """Problems of the record and of its agreement with the files of the library folder: the record's layout,
+    duplicate ids or DOIs, types outside the CSL list, entries without a title, works without their Markdown,
+    Markdown headers naming another key, files no entry names. Returns (problems, entries)."""
     lit = lit or LIT
+    path = os.path.join(lit, RECORD)
+    entries = read_entries(path)
     problems = []
-    fields, rows = read_rows(os.path.join(lit, CSV_NAME))
-    missing = [c for c in COLUMNS if c not in fields]
-    extra = [c for c in fields if c not in COLUMNS]
-    if missing:
-        problems.append('columns missing from the CSV: ' + ', '.join(missing))
-    if extra:
-        problems.append('unexpected columns in the CSV: ' + ', '.join(extra))
-    for col in ('key', 'doi'):
-        seen = {}
-        for r in rows:
-            v = r.get(col) or ''
-            if v:
-                seen[v] = seen.get(v, 0) + 1
-        problems += [f'duplicate {col}: {v} ({n} rows)' for v, n in sorted(seen.items()) if n > 1]
+    with open(path, encoding='utf-8') as f:     # line ends are left to git (CRLF in a Windows checkout)
+        if f.read() != dump(entries):
+            problems.append(f'{RECORD} is not in the script\'s layout (order of entries or fields, indentation): '
+                            'check --fix rewrites it')
+    for label, values in (('id', [e['id'] for e in entries]), ('DOI', [doi_of(e) for e in entries if doi_of(e)])):
+        problems += [f'duplicate {label}: {v} ({n} entries)'
+                     for v, n in sorted(collections.Counter(values).items()) if n > 1]
+    for e in entries:
+        if e.get('type') not in CSL_TYPES:
+            problems.append(f'{e["id"]}: the type "{e.get("type", "")}" is not a CSL type')
+        if not e.get('title'):
+            problems.append(f'{e["id"]}: no title')
     names = set(os.listdir(lit))
-    described = {CSV_NAME}
-    # Rows that name files (or claim a full text) of which none is here, as every row of a fresh clone,
-    # which receives the CSV without the files: one line with the remedy instead of a line per missing file.
-    claiming, fileless = 0, []
-    for r in rows:
-        key = r.get('key') or ''
-        claims = bool(r.get('pdf') or r.get('md') or r.get('full_text') == 'yes')
-        restore = claims and key + '.pdf' not in names and key + '.md' not in names
-        claiming += claims
-        if restore:
-            fileless.append(key)
-        for col, ext in (('pdf', '.pdf'), ('md', '.md')):
-            name, value = key + ext, r.get(col) or ''
-            here = name in names
-            if value and value != name:
-                problems.append(f'{key}: the {col} column says "{value}", expected "{name}"')
-            elif value and not here and not restore:
-                problems.append(f'{key}: {value} is named in the CSV but missing from the folder')
-            elif here and not value:
-                problems.append(f'{key}: {name} is in the folder but the {col} column is empty')
-            if here:
-                described.add(name)
-        md_text = read_text(os.path.join(lit, key + '.md')) if key + '.md' in names else ''
-        if md_text and header_value(md_text, 'key') != key:
-            problems.append(f'{key}: the header of {key}.md names the key "{header_value(md_text, "key")}"')
-        full = full_text_here(key, lit)
-        if r.get('full_text') not in ('yes', 'no'):
-            problems.append(f'{key}: full_text is "{r.get("full_text")}", expected yes or no')
-        elif (r['full_text'] == 'yes') != full and not restore:
-            problems.append(f'{key}: full_text is {r["full_text"]} but the folder holds '
-                            + ('a full text' if full else 'no full text'))
-    if fileless:
-        who = ('none of the works has its files here, as in a fresh clone' if len(fileless) == claiming
-               else 'no local files for ' + ', '.join(fileless))
-        problems.append(f'{who}: fetch downloads the legal open-access copies and writes the Markdown, '
-                        'then collect files the copies downloaded in the browser')
+    described = {RECORD}
+    without_md = []
+    for e in entries:
+        key = e['id']
+        described |= {key + '.pdf', key + '.md'} & names
+        if key + '.md' not in names:
+            without_md.append(key)
+            continue
+        named = header_value(read_text(os.path.join(lit, key + '.md')), 'key')
+        if named != key:
+            problems.append(f'{key}: the header of {key}.md names the key "{named}"')
+    # A fresh clone receives the record without the files: one line with the remedy, not a line per work.
+    if without_md:
+        who = ('none of the works has its Markdown here, as in a fresh clone' if len(without_md) == len(entries)
+               else 'no Markdown for ' + ', '.join(without_md))
+        problems.append(f'{who}: fetch writes the text of the works with a DOI, md that of the others (from a PDF, '
+                        'the summary or the metadata), and collect files the copies downloaded in the browser')
+    if LEGACY in names:
+        described.add(LEGACY)
+        problems.append(f'{LEGACY}, the older record, is still in the folder: {RECORD} replaces it, so it can be '
+                        'deleted')
     for n in sorted(names - described):
         kind = 'subfolder' if os.path.isdir(os.path.join(lit, n)) else 'file'
-        problems.append(f'{kind} not described by any row of the CSV: {n}')
-    return problems, rows
+        problems.append(f'{kind} not named by any entry of the record: {n}')
+    return problems, entries
 
 
 def cmd_check(args):
-    problems, rows = check_problems()
+    if args.fix:
+        write_entries(read_entries())
+    problems, entries = check_problems()
     for p in problems:
-        print('PROBLEM', p)
-    n_pdf = sum(1 for r in rows if r['pdf'])
-    n_md = sum(1 for r in rows if r['md'])
-    n_full = sum(1 for r in rows if r['full_text'] == 'yes')
-    print(f'{len(rows)} rows, {n_pdf} PDF, {n_md} Markdown, {n_full} with full text: '
-          + (f'{len(problems)} problems' if problems else 'consistent'))
-    return 1 if problems else 0
+        say('PROBLEM', p)
+    held = collections.Counter(text_held(e['id']) for e in entries)
+    say(f'{len(entries)} works (' + ', '.join(f'{n} {h}' for h, n in held.most_common()) + '): '
+        + (f'{len(problems)} problems' if problems else 'consistent'))
+    return (1 if problems else 0), {'works': len(entries), 'held': dict(held), 'problems': problems}
 
 
-# ====================================================================== bib
-BIBTYPE = {'journal article': 'article', 'book': 'book', 'book chapter': 'incollection',
-           'conference paper': 'inproceedings', 'report': 'techreport', 'statistics report': 'techreport'}
+# ====================================================================== list
+LIST_COLUMNS = ['id', 'authors', 'year', 'title', 'source', 'type', 'doi', 'pmid', 'pmcid', 'url', 'cited_in',
+                'summary', 'pdf', 'text']
 
 
-def bib_escape(s):
-    return re.sub(r'([&%#_])', r'\\\1', s or '')
-
-
-def bib_authors(row):
-    """BibTeX author list. Works with a DOI: authors_full, each 'Family, Given' as is and a single name
-    (an organisation) in braces. References without a DOI: the authors column as one braced name."""
-    if row.get('doi'):
-        names = [a for a in (row.get('authors_full') or '').split('; ') if a]
-        return ' and '.join(a if ', ' in a else '{' + a + '}' for a in names)
-    return '{' + row['authors'] + '}' if row.get('authors') else ''
-
-
-def bibtex(r):
-    """One BibTeX entry for a CSV row, keyed by its library key."""
-    typ = BIBTYPE.get(r['kind'], 'misc')
-    f = [('author', bib_authors(r)), ('title', '{' + bib_escape(r['title']) + '}'), ('year', r['year'])]
-    if typ == 'article':
-        f.append(('journal', bib_escape(r['source'])))
-    elif typ in ('incollection', 'inproceedings'):
-        f.append(('booktitle', bib_escape(r['source'])))
-    elif r['source']:
-        f.append(('publisher' if typ in ('book', 'techreport') else 'howpublished', bib_escape(r['source'])))
-    for k in ('volume', 'number', 'pages', 'doi', 'pmid', 'pmcid', 'url'):
-        v = r.get('issue' if k == 'number' else k, '')
-        if k == 'pages':
-            v = v.replace('-', '--')        # BibTeX page range
-        if k == 'url' and r.get('doi'):
-            v = ''                          # the DOI already locates the work
-        if v:
-            f.append((k, v))
-    body = ',\n'.join(f'  {k} = {{{v}}}' for k, v in f if v)
-    return f'@{typ}{{{r["key"]},\n{body}\n}}\n'
-
-
-def cmd_bib(args):
-    _, rows = read_rows()
-    text = ''.join(bibtex(r) + '\n' for r in sorted(rows, key=lambda r: r['key']))
-    if args.out:
-        with open(args.out, 'w', encoding='utf-8') as f:
-            f.write(text)
-        print(f'{len(rows)} entries written to {args.out}')
+def cmd_list(args):
+    """Each work (or the keys given) with the text the folder holds for it; --csv writes the same table as a
+    CSV file (UTF-8 with a byte order mark, which spreadsheets need to read the accents)."""
+    entries = read_entries()
+    by_key = {e['id']: e for e in entries}
+    unknown = [k for k in args.keys if k not in by_key]
+    if unknown:
+        raise Refused('unknown keys: ' + ', '.join(unknown))
+    chosen = [by_key[k] for k in args.keys] if args.keys else sorted(entries, key=sort_key)
+    rows = [{'id': e['id'], 'authors': names_line(e), 'year': year_in(e), 'title': e.get('title', ''),
+             'source': container(e), 'type': e.get('type', ''), 'doi': e.get('DOI', ''), 'pmid': e.get('PMID', ''),
+             'pmcid': e.get('PMCID', ''), 'url': e.get('URL', ''), 'cited_in': project(e).get('cited_in', ''),
+             'summary': project(e).get('summary', ''), 'pdf': os.path.exists(os.path.join(LIT, e['id'] + '.pdf')),
+             'text': text_held(e['id'])} for e in chosen]
+    if args.csv:
+        with open(args.csv, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=LIST_COLUMNS)
+            writer.writeheader()
+            writer.writerows(dict(r, pdf='yes' if r['pdf'] else 'no') for r in rows)
+        say(f'{len(rows)} works written to {args.csv}')
     else:
-        try:
-            sys.stdout.write(text)
-        except BrokenPipeError:             # the output was piped into a reader that stopped early (head)
-            sys.stderr.close()
+        for r in rows:
+            say(f'{r["id"]}  [{r["text"]}{", PDF" if r["pdf"] else ""}]  {r["authors"]} ({r["year"] or "n.d."}) '
+                f'{r["title"][:90]}')
+    return 0, {'works': rows}
+
+
+# ====================================================================== convert (from the older CSV)
+# The kind labels of the older record as CSL types; a label not listed becomes a document.
+LEGACY_TYPE = {
+    'journal article': 'article-journal', 'journal article (no DOI)': 'article-journal', 'preprint': 'article',
+    'book': 'book', 'book chapter': 'chapter', 'conference paper': 'paper-conference',
+    'conference paper (no DOI)': 'paper-conference', 'report': 'report', 'statistics report': 'report',
+    'fact sheet': 'report', 'web page': 'webpage', 'statistics page': 'webpage', 'statistics table': 'dataset',
+    'dataset': 'dataset', 'dictionary entry': 'entry-dictionary', 'reference entry': 'entry-encyclopedia',
+    'news': 'article-newspaper', 'news (series)': 'article-newspaper', 'news (radio)': 'broadcast',
+    'legislation': 'legislation', 'legal document': 'legal_case', 'presentation': 'speech',
+    'software (online calculator)': 'software'}
+
+
+def entry_from_row(row):
+    """An entry from a row of the older bibliography.csv, with no network call: the fields that identify and
+    cite the work, cited_in, and the description written for a work without an abstract. The authors come from
+    authors_full, 'Family, Given; Family, Given' as Crossref gave them, where a name without a comma is one
+    literal name (an organisation); a row without authors_full keeps its authors column as one literal name."""
+    typ = LEGACY_TYPE.get(row.get('kind') or '', 'document')
+    e = {'id': row['key'], 'type': typ, 'title': row.get('title') or ''}
+    if row.get('authors_full'):
+        e['author'] = []
+        for a in row['authors_full'].split('; '):
+            fam, _, given = a.partition(', ')
+            if fam:
+                e['author'].append({'family': fam, 'given': given} if given else {'literal': fam})
+    elif row.get('authors'):
+        e['author'] = [{'literal': row['authors']}]
+    if re.fullmatch(r'\d{4}', row.get('year') or ''):
+        e['issued'] = {'date-parts': [[int(row['year'])]]}
+    if row.get('source'):
+        e['container-title' if typ in CONTAINER else 'publisher'] = row['source']
+    for col, var in (('volume', 'volume'), ('issue', 'issue'), ('pages', 'page'), ('doi', 'DOI'),
+                     ('pmid', 'PMID'), ('pmcid', 'PMCID')):
+        if row.get(col):
+            e[var] = row[col]
+    if row.get('url') and not row.get('doi'):
+        e['URL'] = row['url']
+    c = {}
+    if row.get('cited_in'):
+        c['cited_in'] = row['cited_in']
+    if row.get('abstract_or_summary') and row.get('text_type') != 'abstract':
+        c['summary'] = row['abstract_or_summary']
+    if c:
+        e['custom'] = c
+    return e
+
+
+def cmd_convert(args):
+    """Turn the older bibliography.csv into bibliography.json, once, with no network call, so that no correction
+    made by hand is lost. Each abstract of the CSV moves into its <key>.md when that file is missing or holds
+    the metadata only; a work still without a Markdown gets one from its summary or its metadata. A Markdown
+    whose header does not say what it holds is left as it is. The columns
+    that described one machine (full_text, pdf, md, access) and what a source can give again (licence, update
+    notices) are not carried over; the licence of a moved abstract goes into its Markdown's header. .gitignore
+    follows, and the CSV is deleted."""
+    src, dst = os.path.join(LIT, LEGACY), os.path.join(LIT, RECORD)
+    if os.path.exists(dst):
+        raise Refused(f'{dst} already exists: nothing to convert')
+    if not os.path.exists(src):
+        raise Refused(f'{LIT} holds no {LEGACY}')
+    with open(src, encoding='utf-8-sig', newline='') as f:
+        rows = list(csv.DictReader(f))
+    dup = sorted(k for k, n in collections.Counter(r.get('key') for r in rows).items() if n > 1)
+    if dup or any(not r.get('key') for r in rows):
+        raise Refused(f'{LEGACY} has rows without a key or with the same key: {", ".join(map(str, dup))}; '
+                      'fix them first')
+    entries = [entry_from_row(r) for r in rows]
+    moved, written = [], []
+    for r, e in zip(rows, entries):
+        md = os.path.join(LIT, e['id'] + '.md')
+        old = header_value(read_text(md), 'text_source') if os.path.exists(md) else ''
+        if os.path.exists(md) and not old.startswith('metadata only'):
+            continue                            # the full text or the abstract, or a text of unknown origin
+        if r.get('text_type') == 'abstract' and r.get('abstract_or_summary'):
+            write_markdown(e, '## Abstract\n\n' + r['abstract_or_summary'],
+                           f'abstract only, from {r.get("text_source") or "a source not recorded"} '
+                           '(full text not retrieved)', normalise_license(r.get('license') or ''))
+            moved.append(e['id'])
+        elif not old or project(e).get('summary'):
+            write_markdown(e, *summary_body(e), normalise_license(r.get('license') or ''))
+            written.append(e['id'])
+    write_entries(entries, dst)
+    gitignore = ensure_gitignore(LIT)
+    os.remove(src)
+    as_document = sorted({r['kind'] for r, e in zip(rows, entries) if e['type'] == 'document' and r.get('kind')})
+    to_split = [e['id'] for e in entries if len(e.get('author') or []) == 1
+                and ', ' in e['author'][0].get('literal', '')]
+    say(f'{len(entries)} entries written to {dst}; {LEGACY} deleted')
+    say(f'  abstracts moved into their Markdown: {len(moved)}; Markdown written from a summary or the metadata: '
+        f'{len(written)}')
+    if gitignore:
+        say('  .gitignore gains: ' + ', '.join(gitignore))
+    if as_document:
+        say('  kinds recorded as the CSL type document: ' + ', '.join(as_document))
+    if to_split:
+        say('  one literal author that may be a list of persons, to split into names by hand: ' + ', '.join(to_split))
+    return 0, {'entries': len(entries), 'abstracts_moved': moved, 'markdown_written': written,
+               'gitignore': gitignore, 'as_document': as_document, 'authors_to_split': to_split}
 
 
 # ====================================================================== the library folder
@@ -1513,58 +1661,74 @@ def git_root(start):
 
 
 def find_library(start):
-    """The library folder: literature/ or docs/literature/ holding bibliography.csv, in `start` or one of
-    its parents up to the repository root (so the script runs from anywhere inside the project). None when
-    the project has no library yet."""
+    """The library folder: literature/ or docs/literature/ holding bibliography.json (or the older
+    bibliography.csv, for convert), in `start` or one of its parents up to the repository root (so the script
+    runs from anywhere inside the project). None when the project has no library yet."""
     here = pathlib.Path(start).resolve()
     top = git_root(here)
+
+    def holds(d):
+        return (d / RECORD).is_file() or (d / LEGACY).is_file()
+
     for d in [here, *here.parents]:
-        if d.name == 'literature' and (d / CSV_NAME).is_file():
+        if d.name == 'literature' and holds(d):
             return str(d)
         for cand in (d / 'literature', d / 'docs' / 'literature'):
-            if (cand / CSV_NAME).is_file():
+            if holds(cand):
                 return str(cand)
         if top is not None and d == top:
             break
     return None
 
 
-def create_library(lib):
-    """A new, empty library: the folder, a bibliography.csv with its header, and the .gitignore lines of the
-    repository that keep every file of the folder local except bibliography.csv. Returns the lines added."""
-    os.makedirs(lib, exist_ok=True)
-    write_rows([], COLUMNS, os.path.join(lib, CSV_NAME))
+def ensure_gitignore(lib):
+    """The lines of the repository's .gitignore that keep every file of the library local except the record,
+    added when missing; a line that kept the older bibliography.csv is turned into the record's. Returns the
+    lines added or changed."""
     top = git_root(lib)
     if top is None:
         return []
     rel = pathlib.Path(lib).resolve().relative_to(top).as_posix()
-    wanted = [f'{rel}/*', f'!{rel}/{CSV_NAME}']
     gi = top / '.gitignore'
-    have = gi.read_text(encoding='utf-8').splitlines() if gi.exists() else []
-    added = [w for w in wanted if w not in have]
-    if added:
-        text = gi.read_text(encoding='utf-8') if gi.exists() else ''
-        with open(gi, 'a', encoding='utf-8') as f:
-            f.write(('\n' if text and not text.endswith('\n') else '') + '\n'.join(added) + '\n')
-    return added
+    lines = gi.read_text(encoding='utf-8').splitlines() if gi.exists() else []
+    old, changed = f'!{rel}/{LEGACY}', []
+    if old in lines:
+        lines = [f'!{rel}/{RECORD}' if x == old else x for x in lines]
+        changed.append(f'!{rel}/{RECORD}')
+    added = [w for w in (f'{rel}/*', f'!{rel}/{RECORD}') if w not in lines]
+    if changed or added:
+        gi.write_text('\n'.join(lines + added) + '\n', encoding='utf-8')
+    return changed + added
+
+
+def create_library(lib):
+    """A new, empty library: the folder, an empty record, and the .gitignore lines of the repository that keep
+    every file of the folder local except the record. Returns the lines added."""
+    os.makedirs(lib, exist_ok=True)
+    write_entries([], os.path.join(lib, RECORD))
+    return ensure_gitignore(lib)
 
 
 def set_library(lib_arg, command, cwd=None):
     """Set LIT for this run: --lib when given, else the library found from the working directory. The
-    first add in a project without a library creates literature/ at the repository root."""
+    first add in a project without a library creates literature/ at the repository root; a library that
+    still holds the older bibliography.csv is refused with the line naming convert."""
     global LIT
     cwd = cwd or os.getcwd()
     lib = os.path.abspath(lib_arg) if lib_arg else find_library(cwd)
     if lib is None:
         if command != 'add':
-            sys.exit('no library here: no literature/ or docs/literature/ with bibliography.csv from this folder '
-                     'up to the repository root (give --lib, or add a first work to create one)')
+            raise Refused('no library here: no literature/ or docs/literature/ with bibliography.json from this '
+                          'folder up to the repository root (give --lib, or add a first work to create one)')
         lib = str((git_root(cwd) or pathlib.Path(cwd)) / 'literature')
-    if not os.path.isfile(os.path.join(lib, CSV_NAME)):
+    if command != 'convert' and not os.path.isfile(os.path.join(lib, RECORD)):
+        if os.path.isfile(os.path.join(lib, LEGACY)):
+            raise Refused(f'{lib} holds {LEGACY}, the older record: run `literature.py convert` once to turn it '
+                          f'into {RECORD}')
         if command != 'add':
-            sys.exit(f'{lib} holds no {CSV_NAME}')
+            raise Refused(f'{lib} holds no {RECORD}')
         added = create_library(lib)
-        print(f'new library at {lib}' + (f'; .gitignore gains: {", ".join(added)}' if added else ''))
+        say(f'new library at {lib}' + (f'; .gitignore gains: {", ".join(added)}' if added else ''))
     LIT = lib
     return lib
 
@@ -1579,32 +1743,45 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog='literature.py', description=__doc__.split('\n\n')[0])
     p.add_argument('--lib', help='the library folder (default: literature/ or docs/literature/ found from here)')
     p.add_argument('--archive', help='a local folder of PDFs searched by the DOI printed in them (add, fetch)')
+    p.add_argument('--json', action='store_true',
+                   help='print one JSON object on standard output; the messages go to standard error')
     sub = p.add_subparsers(dest='command', required=True)
     a = sub.add_parser('add', help='add a work by its DOI')
     a.add_argument('--key', help='the key to use instead of the one the library would make')
     a.add_argument('doi', help='the DOI, bare or as a doi.org link')
     a.add_argument('--title', help='the title as cited: the DOI is refused if its registered title does not match')
-    a.add_argument('--cited-in', default='', help='where the work is cited (cited_in column)')
-    a.add_argument('--note', help='a short description, kept as the summary when no abstract is found')
+    a.add_argument('--cited-in', default='', help='where the work is cited (custom.cited_in)')
+    a.add_argument('--note', help='a short description, kept as custom.summary when no abstract is found')
     a.add_argument('--pdf', help='a PDF of the work (copied into the library if its title checks out)')
     f = sub.add_parser('fetch', help='retry the open-access sources for works whose full text is not in the folder')
     f.add_argument('keys', nargs='*', help='keys to retry (default: every work with a DOI and no full text in the folder)')
     c = sub.add_parser('collect', help='file the PDFs downloaded by hand')
     c.add_argument('--from', dest='src', default=DOWNLOADS, help='folder to look in (default: %(default)s)')
-    m = sub.add_parser('md', help='write <key>.md again')
+    m = sub.add_parser('md', help='write <key>.md again from the PDF, or a missing one from the summary or metadata')
     m.add_argument('keys', nargs='*', help='keys (default: every missing or stale Markdown)')
     m.add_argument('--force', action='store_true',
                    help='also rewrite Markdown made from JATS XML or a web page (their source is not stored)')
-    sub.add_parser('check', help='consistency report; exit code 1 on problems')
-    b = sub.add_parser('bib', help='export BibTeX')
-    b.add_argument('--out', help='file to write (default: print)')
+    k = sub.add_parser('check', help='the record and its agreement with the files; exit code 1 on problems')
+    k.add_argument('--fix', action='store_true', help="first rewrite the record in the script's layout")
+    ls = sub.add_parser('list', help='each work with the text the folder holds for it')
+    ls.add_argument('keys', nargs='*', help='keys (default: every work)')
+    ls.add_argument('--csv', metavar='PATH', help='write the table to this CSV file, for a spreadsheet, R or Python')
+    sub.add_parser('convert', help='turn the older bibliography.csv into bibliography.json, once, offline')
     args = p.parse_args(argv)
-    global ARCHIVE
+    global ARCHIVE, JSON
     ARCHIVE = os.path.abspath(args.archive) if args.archive else None
-    set_library(args.lib, args.command)
+    JSON = args.json
     commands = {'add': cmd_add, 'fetch': cmd_fetch, 'collect': cmd_collect, 'md': cmd_md,
-                'check': cmd_check, 'bib': cmd_bib}
-    return commands[args.command](args) or 0
+                'check': cmd_check, 'list': cmd_list, 'convert': cmd_convert}
+    try:
+        set_library(args.lib, args.command)
+        code, result = commands[args.command](args)
+    except (Refused, Unreachable) as e:
+        code, result = (2 if isinstance(e, Refused) else 3), {'error': str(e)}
+        print(e, file=sys.stderr)
+    if JSON:
+        print(json.dumps(result, ensure_ascii=False))
+    return code
 
 
 if __name__ == '__main__':
