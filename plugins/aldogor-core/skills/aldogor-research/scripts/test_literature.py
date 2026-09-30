@@ -267,6 +267,9 @@ def test_names_line_and_first_family():
     assert lit.first_family(e) == 'Alonzo'
     assert lit.first_family({'author': [{'literal': 'World Health Organization'}]}) == 'World Health Organization'
     assert lit.names_line({}) == '' and lit.first_family({}) == ''
+    edited = {'editor': [{'family': 'Rechel', 'given': 'Bernd'}, {'family': 'Maresso', 'given': 'Anna'}]}
+    assert lit.names_line(edited) == 'Rechel B, Maresso A' and lit.first_family(edited) == 'Rechel'
+    assert 'authors: ["Bernd Rechel", "Anna Maresso"]' in lit.front_matter(dict(edited, id='Rechel_2018'), 'x')
 
 
 def test_entry_from_crossref_record():

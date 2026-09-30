@@ -221,10 +221,16 @@ def name_text(n):
     return n.get('literal') or ' '.join(x for x in (n.get('given'), n.get('family')) if x)
 
 
+def people(entry):
+    """The names that stand for a work: its authors, or its editors when it has none (an edited book)."""
+    return entry.get('author') or entry.get('editor') or []
+
+
 def names_line(entry, n=3):
-    """The first authors of an entry as 'Family Initials', then 'et al.': for messages and the table of list."""
+    """The first authors (or editors) of an entry as 'Family Initials', then 'et al.': for messages and the
+    table of list."""
     out = []
-    for a in entry.get('author') or []:
+    for a in people(entry):
         ini = ''.join(p[0] for p in re.split(r'[\s\-.]+', a.get('given') or '') if p)
         out.append(a.get('literal') or f'{a.get("family", "")} {ini}'.strip())
     return ', '.join(out[:n]) + (', et al.' if len(out) > n else '')
@@ -630,9 +636,9 @@ def entry_from_meta(key, doi, meta):
 
 
 def first_family(entry):
-    """Family name of the first author of an entry, or its literal name (for matching other versions of the
-    work)."""
-    first = (entry.get('author') or [{}])[0]
+    """Family name of the first author (or editor) of an entry, or its literal name (for matching other
+    versions of the work)."""
+    first = (people(entry) or [{}])[0]
     return first.get('family') or first.get('literal') or ''
 
 
@@ -1125,8 +1131,9 @@ def set_header_fields(header, values):
 
 
 def front_matter(entry, source, license=''):
-    """YAML header of a new Markdown file, so that the file can be read without the record."""
-    authors = [name_text(a) for a in entry.get('author') or []]
+    """YAML header of a new Markdown file, so that the file can be read without the record; the editors stand
+    in for the authors of an edited book."""
+    authors = [name_text(a) for a in people(entry)]
     lines = ['---', f'key: {entry["id"]}', f'title: {yaml_str(entry.get("title"))}',
              'authors: [' + ', '.join(yaml_str(a) for a in authors[:30]) + (', "et al."' if len(authors) > 30 else '') + ']',
              f'year: {year_in(entry)}', f'journal: {yaml_str(container(entry))}', f'doi: {entry.get("DOI", "")}',
