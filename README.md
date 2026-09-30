@@ -31,13 +31,14 @@ On claude.ai: Customize, Plugins, add the marketplace `aldogor/aldogor-claude-pl
 
 With aldogor-core installed both ways, the Claude desktop app hands the claude.ai copy to its Code sessions, and that copy replaces the Claude Code install and follows new versions only when claude.ai syncs the marketplace. To run the Claude Code install in the desktop app, add `"aldogor-core@inline": false` under `enabledPlugins` in `~/.claude/settings.json`.
 
-In a shared project, `.claude/settings.json` can declare the marketplace and the plugins, so that each collaborator gets them after accepting the trust prompt:
+In a shared project, `.claude/settings.json` can declare the marketplace and the plugins, so that each collaborator gets them after accepting the trust prompt, and keeps receiving new versions: Claude Code updates a third-party marketplace only when `autoUpdate` is on.
 
 ```json
 {
   "extraKnownMarketplaces": {
     "aldogor-claude-plugins": {
-      "source": { "source": "github", "repo": "aldogor/aldogor-claude-plugins" }
+      "source": { "source": "github", "repo": "aldogor/aldogor-claude-plugins" },
+      "autoUpdate": true
     }
   },
   "enabledPlugins": {
