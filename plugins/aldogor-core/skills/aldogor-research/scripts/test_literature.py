@@ -577,6 +577,15 @@ def test_convert_turns_the_csv_into_the_record(tmp_path, monkeypatch, capsys):
     assert lit.main(['--lib', str(lib), 'convert']) == 2             # once only
 
 
+@pytest.mark.parametrize('nl', ['\n', '\r\n'])
+def test_the_gitignore_keeps_its_line_ends(tmp_path, nl):
+    (tmp_path / '.git').mkdir()
+    (tmp_path / 'literature').mkdir()
+    (tmp_path / '.gitignore').write_bytes(nl.join(['.env', 'literature/*', '!literature/bibliography.csv', '']).encode())
+    assert lit.ensure_gitignore(str(tmp_path / 'literature')) == ['!literature/bibliography.json']
+    assert (tmp_path / '.gitignore').read_bytes() == nl.join(['.env', 'literature/*', '!literature/bibliography.json', '']).encode()
+
+
 def test_convert_leaves_a_markdown_of_unknown_origin_alone(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(lit, 'JSON', False)
     lib = legacy_library(tmp_path)

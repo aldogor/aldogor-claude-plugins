@@ -1683,21 +1683,23 @@ def find_library(start):
 
 def ensure_gitignore(lib):
     """The lines of the repository's .gitignore that keep every file of the library local except the record,
-    added when missing; a line that kept the older bibliography.csv is turned into the record's. Returns the
-    lines added or changed."""
+    added when missing; a line that kept the older bibliography.csv is turned into the record's. The file keeps
+    its line ends (LF or CRLF). Returns the lines added or changed."""
     top = git_root(lib)
     if top is None:
         return []
     rel = pathlib.Path(lib).resolve().relative_to(top).as_posix()
     gi = top / '.gitignore'
-    lines = gi.read_text(encoding='utf-8').splitlines() if gi.exists() else []
+    text = gi.read_bytes().decode('utf-8') if gi.exists() else ''
+    nl = '\r\n' if '\r\n' in text else '\n'
+    lines = text.splitlines()
     old, changed = f'!{rel}/{LEGACY}', []
     if old in lines:
         lines = [f'!{rel}/{RECORD}' if x == old else x for x in lines]
         changed.append(f'!{rel}/{RECORD}')
     added = [w for w in (f'{rel}/*', f'!{rel}/{RECORD}') if w not in lines]
     if changed or added:
-        gi.write_text('\n'.join(lines + added) + '\n', encoding='utf-8')
+        gi.write_text(nl.join(lines + added) + nl, encoding='utf-8', newline='')
     return changed + added
 
 
