@@ -6,11 +6,11 @@
 
 **PubMed (MCP).** `PubMed:search_articles` (full PubMed syntax: `[Title]`, `[MeSH Terms]`, `[Publication Type]`, boolean operators, date ranges), `PubMed:lookup_article_by_citation`, `PubMed:get_article_metadata`, `PubMed:get_full_text_article` (PMC open-access only), `PubMed:find_related_articles`, `PubMed:convert_article_ids` (PMID/PMCID/DOI). Biomedical only.
 
-**OpenAlex (HTTPS, no key).** Any-field coverage, preprints, citation graph.
+**OpenAlex (HTTPS, free key recommended).** Any-field coverage, preprints, citation graph.
 - Search: `https://api.openalex.org/works?search=TERMS&per-page=25&select=id,doi,title,publication_year,cited_by_count,primary_location,authorships` (the `select` list keeps a page of 25 works to a few KB; add `type` or `open_access` when needed)
 - By DOI: `https://api.openalex.org/works/doi:10.xxxx/yyyy`
 - Citation graph: `referenced_works` (outgoing) and `cited_by_api_url` (incoming) on any work object.
-- Add `&mailto=USER_EMAIL` (polite pool: faster, more reliable). Ask the user for their email once per project; never invent one.
+- Calls are metered against a daily budget and `mailto` is ignored: keyless calls get a small budget, a free API key (from openalex.org, kept in the environment as `OPENALEX_API_KEY` and sent as `api_key=`) raises it tenfold. Lookups of a single work by DOI are the cheapest call, searches cost more; a 429 means the day's budget is spent, and the gap is reported, not retried in a loop.
 
 **Crossref (HTTPS, no key).** Canonical DOI metadata: `https://api.crossref.org/works/10.xxxx/yyyy`. Retraction signal: `updated-by` entries on the cited work (types retraction, correction, expression_of_concern, each dated); `update-to` is what the notice carries, not the article. OpenAlex mirrors it as `is_retracted` (Retraction Watch data flows through Crossref). One call to `https://doi.org/<doi>` with `Accept: application/x-bibtex` returns the title and a ready BibTeX entry in about 1 KB: the cheapest existence check.
 
@@ -37,6 +37,6 @@ Count first, paginate deterministically, reconcile at the end. Fail visible, not
 
 ## Identifier traps
 
-- A DOI constructed as `10.48550/arXiv.<id>` resolves at doi.org but is often absent from Crossref: absence there is not fabrication evidence for arXiv works.
+- A DOI absent from Crossref may be registered with another agency: DataCite (Zenodo, figshare, arXiv's `10.48550`, many datasets and reports) or mEDRA (several Italian publishers). Absence from Crossref is never fabrication evidence; only `https://doi.org/<doi>` answering 404 is, and a timeout or a 429 is inconclusive.
 - PMID, PMCID, and DOI are convertible (`PubMed:convert_article_ids`); prefer the DOI as the identifier, PMID as fallback.
 - bioRxiv/medRxiv have no keyword search of their own; preprint keyword queries go through OpenAlex or Europe PMC instead.

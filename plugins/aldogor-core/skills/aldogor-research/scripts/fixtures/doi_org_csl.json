@@ -1,0 +1,18 @@
+{
+  "type": "software",
+  "id": "https://doi.org/10.5555/zenodo.0001",
+  "categories": ["Public health", "Example analyses"],
+  "language": "en",
+  "author": [
+    {"family": "Kappa", "given": "Kira"},
+    {"literal": "Example Software Collective"}
+  ],
+  "issued": {"date-parts": [[2025, 3, 14]]},
+  "abstract": "A fictitious toolkit for example analyses.",
+  "DOI": "10.5555/ZENODO.0001",
+  "publisher": "Zenodo",
+  "title": "Example toolkit for fictitious analyses",
+  "URL": "https://zenodo.org/records/0001",
+  "copyright": "Creative Commons Attribution 4.0 International",
+  "version": "1.2.0"
+}

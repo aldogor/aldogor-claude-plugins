@@ -1,7 +1,7 @@
 ---
 name: aldogor-grill
 description: >-
-  Resolves open decisions by structured questions, each with a recommended answer: interviewing the user in rounds until a plan, protocol or design holds ("grill me", "grigliami", "aldogor-grill", "stress-test this", "challenge this design"), or turning what the user cannot answer alone into a questionnaire for a named recipient such as IT, the DPO, administration or a collaborator ("aldogor-questionnaire", "prepara le domande per", "turn this into a questionnaire", an email that is mostly questions).
+  Resolves open decisions by structured questions, each with a recommended answer: interviewing the user in rounds whenever two or more decisions that are theirs stand between the request and the work, or until a plan, protocol or design holds ("grill me", "grigliami", "aldogor-grill", "fammi domande interattive", "ask me interactively", "guide me through these decisions", "aiutami a decidere", "stress-test this", "challenge this design"), or turning what the user cannot answer alone into a questionnaire for a named recipient such as IT, the DPO, administration or a collaborator ("aldogor-questionnaire", "prepara le domande per", "turn this into a questionnaire", an email that is mostly questions).
 ---
 
 # Aldogor-grill
@@ -17,11 +17,19 @@ Interview the user until shared understanding is reached. The subject can be any
 **Q1. Question title.** Question body, one decision only, with the realistic options where they exist.
 *Recommendation:* the answer you would give, in one or two lines.
 
+Word each question so that a plain yes accepts the recommendation; the user then writes only where they disagree.
+
+**What a round asks.** Only the decisions that change the work become questions. The minor ones go out with the round as a numbered list of defaults, each with its reason in one line, which the user accepts unless they object to one by its number. A round opens with a short paragraph on what it settles and what the answers will change, so that every question can be answered without asking what it means. A question about a physical object or a document carries the excerpt, plan or photo that makes it answerable.
+
+**The question dialog.** Where the client has a question tool (AskUserQuestion), a question with two to four real options goes through it, up to four questions per call and as many calls as the round needs. The question text carries the context the decision needs; the recommended option comes first, marked as recommended; each option's description says what it commits to and what it costs; when a choice is easier to make with a passage, a table or a draft in view, that goes in the option's preview. What the user writes in the notes or in Other is the answer, in their words. A question whose answer is a value, a name or a judgement stays in the numbered text, and so do the defaults. The dialog changes how a round is asked, never the tree, the frontier or the closure.
+
+**A second view.** When a round settles a design, architecture or method choice and a counsel agent is available (aldogor-counsel in Claude Code), ask it for its recommendation on those questions before the round goes out, in a brief that stands alone. Where its answer differs from yours, the question shows both, each with its reason.
+
 A question whose answer depends on another question still open in this round belongs to a later round, not this one. Each answered round reshapes the tree: settled decisions push the frontier outward and unblock what depended on them. Recompute the frontier and ask the next round.
 
 **Facts are yours, decisions are the user's.** Never ask the user for a fact you can find yourself. Environment facts (files, data, configurations) go to a subagent or a direct lookup; domain facts (which validated instruments exist, what a guideline requires, what a norm says) go through your own research, using aldogor-research when the answer must rest on verified sources. A running lookup is an unsettled prerequisite: only the questions downstream of it wait, the rest of the frontier goes out now. Decisions (trade-offs, priorities, appetite for risk, institutional constraints only the user knows) are put to the user, one per question, and you wait.
 
-**Closure.** The session is done when the frontier is empty: every branch visited, nothing left silently assumed. Confirm with the user that shared understanding is reached before acting on it. The rounds themselves write nothing; the conversation carries the tree. At closure, record the resolved decisions in the document that owns them: update the plan or protocol that was grilled, or the project's state document, following its conventions. In a project with `JOURNAL.md`, the reasoning behind each decision and the alternatives discarded go in the journal under today's date, and the nodes change state in its open list (`## Open`, at the end). If no such document exists, offer to create the smallest one that fits. The outcome never lives only in the chat.
+**Closure.** The session is done when the frontier is empty: every branch visited, every question answered or explicitly deferred, nothing left silently assumed. A question the user skipped comes back in the next round. Confirm with the user that shared understanding is reached before acting on it. The rounds themselves write nothing; the conversation carries the tree. At closure, record the resolved decisions in the document that owns them: update the plan or protocol that was grilled, or the project's state document, following its conventions. In a project with `JOURNAL.md`, the reasoning behind each decision and the alternatives discarded go in the journal under today's date, and the nodes change state in its open list (`## Open`, at the end). If no such document exists, offer to create the smallest one that fits. The outcome never lives only in the chat.
 
 ## Questionnaire for a recipient
 

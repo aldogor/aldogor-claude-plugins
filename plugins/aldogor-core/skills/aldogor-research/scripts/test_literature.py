@@ -1,6 +1,7 @@
 """Tests for literature.py: its pure functions, the record, the library folder and the commands, on the fixtures
 in fixtures/ (fictitious works, DOIs under Crossref's test prefix 10.5555). No network: the commands run with
-retrieve() and the metadata sources replaced by stand-ins.
+retrieve() and the metadata sources replaced by stand-ins, or with requests' Session replaced by one that answers
+from the test (fake_network).
 
 Run with: python -m pytest <this folder>
 """
@@ -10,6 +11,7 @@ import json
 import os
 import shutil
 import sys
+from urllib.parse import parse_qs, urlparse
 
 import pymupdf
 import pytest
@@ -504,8 +506,10 @@ def test_add_distinguishes_an_unknown_doi_from_an_unreachable_source(tmp_path, m
     monkeypatch.setattr(lit, 'crossref', lambda doi: None)
     monkeypatch.setattr(lit, 'epmc_meta', lambda doi: None)
     monkeypatch.setattr(lit, 'FAILED', set())
+    monkeypatch.setattr(lit, 'doiorg_meta', lambda doi: (None, 'unregistered'))
     assert lit.main(['--lib', str(lib), 'add', '10.5555/unknown']) == 2
     monkeypatch.setattr(lit, 'FAILED', {'crossref', 'epmc'})
+    monkeypatch.setattr(lit, 'doiorg_meta', lambda doi: (None, 'unreachable'))
     assert lit.main(['--lib', str(lib), 'add', '10.5555/unknown']) == 3
     assert lit.main(['--lib', str(lib), 'add', 'not-a-doi']) == 2
     assert lit.main(['--lib', str(lib), 'add', '10.5555/ALPHA.2021']) == 2   # already in the library
@@ -664,3 +668,174 @@ def test_commands_other_than_add_need_a_library(tmp_path):
     (tmp_path / '.git').mkdir()
     with pytest.raises(lit.Refused):
         lit.set_library(None, 'check', cwd=str(tmp_path))
+
+
+# ---------------------------------------------------------------- a stand-in for the network
+class Answer:
+    """A stand-in for a requests Response: a status, a content type and a body, JSON unless it is a string."""
+
+    def __init__(self, status=200, body=None, ctype='application/json'):
+        self.status_code, self.ok, self.is_redirect, self.url = status, status < 400, False, ''
+        self.headers = {'content-type': ctype}
+        self.body = {} if body is None else body
+        self.text = self.body if isinstance(self.body, str) else json.dumps(self.body)
+        self.content = self.text.encode('utf-8')
+
+    def json(self):
+        if isinstance(self.body, str):
+            raise ValueError('not JSON')
+        return self.body
+
+
+def fake_network(monkeypatch, answers):
+    """Replace the network for one test. Each GET is recorded as (url, headers) and answered by the first of
+    `answers` (pairs of a URL fragment and an Answer, or an exception to raise) whose fragment is in the URL; a
+    URL that no pair expects fails the test. The run's caches, its failure notes and the OpenAlex budget flag
+    start empty, and time.sleep returns at once, so the throttle and the retry cost no time."""
+    calls = []
+
+    class Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def get(self, url, headers=None, **kw):
+            calls.append((url, dict(headers or {})))
+            for fragment, answer in answers:
+                if fragment in url:
+                    if isinstance(answer, Exception):
+                        raise answer
+                    return answer
+            raise AssertionError(f'unexpected request: {url}')
+
+    monkeypatch.setattr(lit.requests, 'Session', Session)
+    monkeypatch.setattr(lit.time, 'sleep', lambda seconds: None)
+    for cache in ('_CROSSREF', '_EPMC', '_DOIORG'):
+        monkeypatch.setattr(lit, cache, {})
+    monkeypatch.setattr(lit, 'FAILED', set())
+    monkeypatch.setattr(lit, 'OPENALEX_SPENT', False)
+    return calls
+
+
+def query(url):
+    """The parameters of a URL's query string, as lists of values."""
+    return parse_qs(urlparse(url).query)
+
+
+# ---------------------------------------------------------------- OpenAlex: the API key and the daily budget
+KEY = 'fictitious-openalex-key-5555'
+OPENALEX_ANSWERS = [('api.openalex.org/works?search=', Answer(body={'results': []})),
+                    ('api.openalex.org/works/doi:', Answer(body={'open_access': {'oa_status': 'closed'}}))]
+
+
+def test_openalex_key_goes_to_openalex_only_and_never_into_the_output(tmp_path, monkeypatch, capsys):
+    """A whole add, with only the network replaced: the key travels as api_key with each OpenAlex request,
+    reaches no other host, and appears neither in the messages nor in the JSON result."""
+    lib = library(tmp_path)
+    monkeypatch.setenv('OPENALEX_API_KEY', KEY)
+    work = {'type': 'journal-article', 'title': ['A study of example keys'], 'issued': {'date-parts': [[2026]]},
+            'author': [{'family': 'Lambda', 'given': 'Lia'}], 'container-title': ['Journal of Examples']}
+    calls = fake_network(monkeypatch, [
+        ('api.crossref.org/works/', Answer(body={'message': work})),
+        ('ebi.ac.uk/europepmc', Answer(body={'resultList': {'result': []}})),
+        ('api.semanticscholar.org', Answer(404, {'error': 'not found'})),
+        *OPENALEX_ANSWERS])
+    assert lit.main(['--json', '--lib', str(lib), 'add', '10.5555/lambda.2026']) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)['added']['id'] == 'Lambda_2026'
+    to_openalex = [u for u, _ in calls if 'api.openalex.org' in u]
+    assert len(to_openalex) == 2                                    # the work's record and the search for versions
+    assert all(query(u)['api_key'] == [KEY] and 'mailto' not in query(u) for u in to_openalex)
+    assert all(KEY not in u and KEY not in str(h) for u, h in calls if 'api.openalex.org' not in u)
+    assert KEY not in captured.out + captured.err
+
+
+def test_openalex_without_a_key_is_called_keyless(monkeypatch):
+    monkeypatch.delenv('OPENALEX_API_KEY', raising=False)
+    calls = fake_network(monkeypatch, OPENALEX_ANSWERS)
+    assert lit.openalex('10.5555/alpha.2021') == {'open_access': {'oa_status': 'closed'}}
+    assert lit.other_versions('A trial of fictitious things', 'Gamma') == []
+    assert len(calls) == 2
+    assert all('api_key' not in query(u) and 'mailto' not in query(u) for u, _ in calls)
+
+
+def test_openalex_429_is_reported_once_and_not_retried(monkeypatch, capsys):
+    """A 429 from OpenAlex is its daily budget spent: one request, one message, and OpenAlex is skipped for
+    the rest of the run, while the other sources go on."""
+    monkeypatch.delenv('OPENALEX_API_KEY', raising=False)
+    calls = fake_network(monkeypatch, [('api.openalex.org', Answer(429, {'error': 'Rate limit exceeded'}))])
+    assert lit.openalex('10.5555/alpha.2021') == {}
+    assert lit.openalex('10.5555/rossi.2024') == {}
+    assert lit.other_versions('A trial of fictitious things', 'Gamma') == []
+    assert len(calls) == 1                                          # no retry, and no request after the 429
+    captured = capsys.readouterr()
+    messages = captured.out + captured.err
+    assert messages.count('budget is spent') == 1
+    assert 'OPENALEX_API_KEY' in messages                           # without a key, the remedy is named
+
+
+# ---------------------------------------------------------------- doi.org: DOIs of other registration agencies
+def test_a_csl_record_from_doi_org_makes_the_entry_its_crossref_record_makes():
+    """The same work as in test_entry_from_crossref_record, as doi.org gives it in CSL JSON (strings where the
+    Crossref API has lists, plus fields an entry does not keep): the entry is the same."""
+    csl = {'type': 'article-journal', 'title': 'Uso dei social media', 'subtitle': ['uno studio di coorte'],
+           'language': 'it', 'author': [{'family': 'Rossi', 'given': 'Maria', 'sequence': 'first'}],
+           'issued': {'date-parts': [[2024, 5, 2]]}, 'container-title': 'Rivista di Esempio', 'publisher': 'Editore',
+           'volume': '3', 'page': '10-20', 'URL': 'https://doi.org/10.5555/rossi', 'abstract': 'Not kept.'}
+    e = lit.entry_from_meta('Rossi_2024', '10.5555/rossi', lit.meta_from_csl('10.5555/rossi', csl))
+    assert e == {'id': 'Rossi_2024', 'type': 'article-journal', 'title': 'Uso dei social media: uno studio di coorte',
+                 'language': 'it', 'author': [{'family': 'Rossi', 'given': 'Maria'}],
+                 'issued': {'date-parts': [[2024]]}, 'container-title': 'Rivista di Esempio', 'volume': '3',
+                 'page': '10-20', 'DOI': '10.5555/rossi'}
+
+
+# Crossref and Europe PMC know none of the DOIs below.
+UNKNOWN_ELSEWHERE = [('api.crossref.org/works/', Answer(404, 'Resource not found.', 'text/plain')),
+                     ('ebi.ac.uk/europepmc', Answer(body={'resultList': {'result': []}}))]
+
+
+def test_add_falls_back_to_doi_org_after_crossref_and_europe_pmc(tmp_path, monkeypatch):
+    """A DataCite DOI (a Zenodo record, in the fixture): Crossref and Europe PMC miss it, doi.org gives its CSL
+    record, and the entry keeps the CSL type, the names, the year and the publisher, and nothing else."""
+    lib = library(tmp_path)
+    monkeypatch.setattr(lit, 'retrieve', fake_retrieve([], open_access=()))
+    with open(os.path.join(FIXTURES, 'doi_org_csl.json'), encoding='utf-8') as f:
+        record = json.load(f)
+    calls = fake_network(monkeypatch, [*UNKNOWN_ELSEWHERE, ('https://doi.org/', Answer(body=record, ctype=lit.CSL_JSON))])
+    assert lit.main(['--lib', str(lib), 'add', 'https://doi.org/10.5555/ZENODO.0001', '--cited-in', 'methods']) == 0
+    url, headers = calls[-1]
+    assert url == 'https://doi.org/10.5555/zenodo.0001' and headers['Accept'] == lit.CSL_JSON
+    added = by_id(lit.read_entries(str(lib / lit.RECORD)))['Kappa_2025']
+    assert added == {'id': 'Kappa_2025', 'type': 'software', 'title': 'Example toolkit for fictitious analyses',
+                     'author': [{'family': 'Kappa', 'given': 'Kira'}, {'literal': 'Example Software Collective'}],
+                     'issued': {'date-parts': [[2025]]}, 'publisher': 'Zenodo', 'DOI': '10.5555/zenodo.0001',
+                     'custom': {'cited_in': 'methods'}}
+
+
+@pytest.mark.parametrize('answer, says', [
+    (Answer(404, '<h1>DOI Not Found</h1>', 'text/html'), 'not a registered DOI (doi.org answers 404'),
+    (Answer(200, '<h1>A landing page</h1>', 'text/html'), 'no CSL record (HTTP 200, text/html)'),
+])
+def test_add_refuses_a_doi_that_doi_org_does_not_describe(tmp_path, monkeypatch, capsys, answer, says):
+    """Only a 404 from doi.org says that the DOI is not registered; a page instead of a CSL record is refused
+    too, with what doi.org gave, since no retry would change it."""
+    lib = library(tmp_path)
+    fake_network(monkeypatch, [*UNKNOWN_ELSEWHERE, ('https://doi.org/', answer)])
+    assert lit.main(['--json', '--lib', str(lib), 'add', '10.5555/nowhere']) == 2
+    assert says in json.loads(capsys.readouterr().out)['error']
+    assert lit.read_entries(str(lib / lit.RECORD)) == fixture_entries()
+
+
+@pytest.mark.parametrize('answer', [lit.requests.Timeout('read timed out'), Answer(429, 'Too Many Requests', 'text/plain'),
+                                    Answer(503, 'Service Unavailable', 'text/plain')],
+                         ids=['timeout', '429', '503'])
+def test_add_reports_doi_org_without_an_answer_as_inconclusive(tmp_path, monkeypatch, capsys, answer):
+    """A timeout, a 429 or a 5xx from doi.org, after the one retry, leaves the DOI's existence unknown: exit code
+    3, a source that could not be reached, with the message saying so."""
+    lib = library(tmp_path)
+    calls = fake_network(monkeypatch, [*UNKNOWN_ELSEWHERE, ('https://doi.org/', answer)])
+    assert lit.main(['--json', '--lib', str(lib), 'add', '10.5555/somewhere']) == 3
+    assert 'inconclusive' in json.loads(capsys.readouterr().out)['error']
+    assert sum('https://doi.org/' in u for u, _ in calls) == 2      # the request and its one retry

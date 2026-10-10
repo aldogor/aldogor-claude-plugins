@@ -25,10 +25,11 @@ that has only the record gets its open-access texts back.
 Subcommands (run from anywhere inside the project: the library is the literature/ or docs/literature/ folder
 holding bibliography.json, found from the working directory up to the repository root, or given with --lib)
     add DOI [--key K] [--title T] [--cited-in T] [--note T] [--pdf PATH]
-                        add a work: metadata from Crossref, legal open-access full text or abstract,
-                        Markdown, new entry in the record. In a project without a library, the first add
-                        creates literature/ at the repository root and the .gitignore lines that keep its
-                        files local
+                        add a work: metadata from Crossref, else Europe PMC, else doi.org (which answers
+                        for every registration agency: DataCite for Zenodo, figshare and arXiv, mEDRA),
+                        legal open-access full text or abstract, Markdown, new entry in the record. In a
+                        project without a library, the first add creates literature/ at the repository
+                        root and the .gitignore lines that keep its files local
     fetch [KEY ...]     try the legal open-access sources again for works whose full text is not in the
                         folder (in a fresh clone, every work with a DOI), writing the full text or the abstract
     collect [--from DIR]
@@ -59,8 +60,14 @@ Retrieval rules:
     is not pursued: the attempt is reported and the copy is left to the user's own browser, from which
     collect files it;
   - an honest User-Agent, at most one request per second per host (one every three seconds for
-    Semantic Scholar), one retry after a 429 or 5xx answer;
+    Semantic Scholar), one retry after a 429 or 5xx answer, except a 429 from OpenAlex (below);
   - a PDF is kept only if the work's title is printed on its first pages.
+
+OpenAlex meters its API against a daily budget per caller. A free OpenAlex API key, set in the environment
+variable OPENALEX_API_KEY, raises that budget tenfold: the script then sends it, as the api_key parameter, with
+every OpenAlex request and with no other, and never prints it. Without the variable it calls OpenAlex keyless.
+A 429 from OpenAlex means the day's budget is spent: the script says so once and skips OpenAlex for the rest of
+the run, since retrying cannot help before the budget resets.
 
 Requirements: Python 3.10 or later on Windows, macOS or Linux, and the packages requests, lxml, pymupdf and
 pymupdf4llm (`python -m pip install requests lxml pymupdf pymupdf4llm`); markitdown only to convert an article
@@ -402,9 +409,14 @@ def _get_following(url, headers, timeout, allow_redirects, **kw):
 FAILED = set()      # endpoint names whose last request got no answer (no connection, or 429 or 5xx twice)
 
 
-def get(url, name, throttle, timeout=40, allow_redirects=True, **kw):
-    """GET with throttling and one retry on 429 or 5xx. Returns a Response, or None on failure or when
-    the URL (or a redirect) points to a refused host. An endpoint that gives no answer is noted in FAILED."""
+RETRY = (429, 500, 502, 503, 504)      # answers worth one more try: busy (429) or a server error (5xx)
+
+
+def get(url, name, throttle, timeout=40, allow_redirects=True, retry=RETRY, **kw):
+    """GET with throttling and one retry on an answer whose status is in `retry` (429 or 5xx unless the
+    caller narrows it: OpenAlex's 429 is a spent daily budget, which a retry cannot help). Returns a
+    Response, or None on failure or when the URL (or a redirect) points to a refused host. An endpoint
+    that gives no answer is noted in FAILED."""
     headers = kw.pop('headers', UA)
     r = None
     for attempt in range(2):
@@ -416,7 +428,7 @@ def get(url, name, throttle, timeout=40, allow_redirects=True, **kw):
             return None
         except requests.RequestException:
             r = None
-        if r is not None and r.status_code not in (429, 500, 502, 503, 504):
+        if r is not None and r.status_code not in retry:
             FAILED.discard(name)
             return r
         time.sleep(5 * (attempt + 1))
@@ -496,6 +508,65 @@ def epmc_meta(doi):
             'issued': {'date-parts': [[int(x['pubYear'])]]} if x.get('pubYear') else None,
             'volume': ji.get('volume'), 'issue': ji.get('issue'), 'page': x.get('pageInfo'),
             'type': 'journal-article', 'source': 'europepmc'}
+
+
+# doi.org content negotiation: asked for this media type, doi.org passes the request to the DOI's registration
+# agency (Crossref, DataCite, mEDRA and others), which answers with the work's record in CSL JSON.
+CSL_JSON = 'application/vnd.citationstyles.csl+json'
+_DOIORG = {}        # doi -> (Crossref-shaped record or None, outcome), for the duration of one run
+
+
+def meta_from_csl(doi, csl):
+    """A CSL JSON record (doi.org's answer) in the Crossref shape the rest of the script reads, so that the
+    key, the title check and entry_from_meta treat it as they treat a Crossref record. Crossref keeps title,
+    subtitle and container-title as lists and a single-name author under 'name', where CSL has strings and
+    'literal'. The type is already a CSL type, which entry_from_meta keeps. Only the fields an entry keeps
+    are carried over: the abstract, URL, licence, version and keywords of the record are left out."""
+    def as_list(v):
+        return v if isinstance(v, list) else ([v] if v else [])
+
+    names = [{crossref_name: n[csl_name] for csl_name, crossref_name in
+              (('family', 'family'), ('given', 'given'), ('literal', 'name')) if n.get(csl_name)}
+             for n in csl.get('author') or [] if isinstance(n, dict)]
+    meta = {'DOI': doi, 'type': csl.get('type'), 'title': as_list(csl.get('title')),
+            'subtitle': as_list(csl.get('subtitle')), 'author': names, 'issued': csl.get('issued'),
+            'container-title': as_list(csl.get('container-title')), 'publisher': csl.get('publisher'),
+            'language': csl.get('language'), 'source': 'doi.org'}
+    meta.update((var, csl[var]) for var in ('volume', 'issue', 'page') if csl.get(var))
+    return meta
+
+
+def doiorg_meta(doi):
+    """Crossref-shaped metadata from doi.org, for a DOI that Crossref and Europe PMC do not know (one
+    registered with DataCite, as Zenodo, figshare and arXiv do, or with mEDRA). Returns (meta, outcome):
+      'found'           meta is the record;
+      'unregistered'    doi.org answers 404, the only answer meaning that no agency registered the DOI;
+      'unreachable'     no answer settles it: no connection, a timeout, or 429 or 5xx again after get()'s
+                        one retry, so whether the DOI exists is not known;
+      'no CSL record (...)'  doi.org answers otherwise without a CSL record, for instance with the landing
+                        page, which an agency that does not offer content negotiation sends instead.
+    meta is None for every outcome but 'found'."""
+    if doi not in _DOIORG:
+        FAILED.discard('doi.org')               # so that FAILED below speaks of this request alone
+        r = get('https://doi.org/' + urllib.parse.quote(doi, safe='/'), 'doi.org', T,
+                headers={**UA, 'Accept': CSL_JSON})
+        if 'doi.org' in FAILED:
+            out = None, 'unreachable'
+        elif r is None:                         # get() stopped at a redirect to a refused host
+            out = None, 'no CSL record (it resolves to a host this script does not request)'
+        elif r.status_code == 404:
+            out = None, 'unregistered'
+        else:
+            try:
+                csl = r.json() if r.ok else None
+            except ValueError:                  # a landing page, or any other text that is not JSON
+                csl = None
+            if isinstance(csl, dict) and csl.get('title'):
+                out = meta_from_csl(doi, csl), 'found'
+            else:
+                out = None, f'no CSL record (HTTP {r.status_code}, {r.headers.get("content-type") or "no type"})'
+        _DOIORG[doi] = out
+    return _DOIORG[doi]
 
 
 def title_of(meta):
@@ -608,10 +679,13 @@ def retraction(meta):
 
 
 def entry_from_meta(key, doi, meta):
-    """A new entry for a work with a DOI, from its Crossref (or Europe PMC) record: the CSL type, the title
-    with its subtitle, the language when it is not English, the authors, the year, the journal (or the book,
-    site or programme) or else the publisher, volume, issue, page and DOI."""
-    typ = CSL_TYPE.get(meta.get('type'), 'document')
+    """A new entry for a work with a DOI, from its Crossref (or Europe PMC, or doi.org) record: the CSL type,
+    the title with its subtitle, the language when it is not English, the authors, the year, the journal (or
+    the book, site or programme) or else the publisher, volume, issue, page and DOI."""
+    # A Crossref type is mapped by CSL_TYPE; a doi.org record already carries a CSL type, which is kept.
+    # No Crossref type left out of CSL_TYPE is also the name of a CSL type, so the two never collide.
+    t = meta.get('type')
+    typ = CSL_TYPE.get(t) or (t if t in CSL_TYPES else 'document')
     e = {'id': key, 'type': typ, 'title': u(full_title(meta))}
     lang = (meta.get('language') or '').strip()
     if lang and not lang.lower().startswith('en'):
@@ -761,11 +835,38 @@ def s3_url(uri):
     return S3 + '/' + uri[len('s3://pmc-oa-opendata/'):].split('?')[0]
 
 
+OPENALEX_SPENT = False      # set at OpenAlex's first 429: the day's budget is spent, so the run stops asking
+
+
+def openalex_get(url):
+    """GET an OpenAlex API address (one that already has its query string). The key in the environment
+    variable OPENALEX_API_KEY, when set, goes into the address as the api_key parameter; OpenAlex reads the
+    header Authorization: Bearer too, but get() sends its headers to every hop of a redirect, while a
+    parameter of the address stays with OpenAlex. The address is never printed, so neither is the key.
+    A 429 is not retried: it means the day's budget is spent, which is said once, and OpenAlex is skipped
+    for the rest of the run. Returns the Response when OpenAlex answered with success, else None."""
+    global OPENALEX_SPENT
+    if OPENALEX_SPENT:
+        return None
+    key = os.environ.get('OPENALEX_API_KEY', '').strip()
+    if key:
+        url += '&api_key=' + urllib.parse.quote(key, safe='')
+    r = get(url, 'openalex', T, retry=tuple(s for s in RETRY if s != 429))
+    if r is not None and r.status_code == 429:
+        OPENALEX_SPENT = True
+        say("OpenAlex answers 429: today's request budget is spent, so OpenAlex is not asked again in this run "
+            '(the open-access copies it lists and its abstracts are missed)'
+            + ('' if key else '; a free OpenAlex API key in the environment variable OPENALEX_API_KEY raises '
+                              'the daily budget tenfold'))
+        return None
+    return r if (r is not None and r.ok) else None
+
+
 def openalex(doi):
     """OpenAlex record of a DOI: open-access status, copies, abstract (as an inverted index)."""
-    r = get(f'https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe="/")}'
-            '?select=id,open_access,best_oa_location,locations,ids,abstract_inverted_index', 'openalex', T)
-    return r.json() if (r is not None and r.ok) else {}
+    r = openalex_get(f'https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe="/")}'
+                     '?select=id,open_access,best_oa_location,locations,ids,abstract_inverted_index')
+    return r.json() if r is not None else {}
 
 
 def s2(doi):
@@ -828,9 +929,9 @@ def other_versions(title, family):
     with the same title and the same first author."""
     fam = fold(family)
     q = urllib.parse.quote(re.sub(r'[^\w\s]', ' ', title)[:200])
-    r = get(f'https://api.openalex.org/works?search={q}&per-page=10'
-            '&select=id,doi,display_name,authorships,best_oa_location,locations,open_access', 'openalex', T)
-    if r is None or not r.ok:
+    r = openalex_get(f'https://api.openalex.org/works?search={q}&per-page=10'
+                     '&select=id,doi,display_name,authorships,best_oa_location,locations,open_access')
+    if r is None:
         return []
     urls = []
     for w in r.json().get('results', []):
@@ -1266,10 +1367,18 @@ def cmd_add(args):
     if args.pdf and not os.path.isfile(args.pdf):
         raise Refused(f'no such file: {args.pdf}')
     meta = crossref(doi) or epmc_meta(doi)
-    if not meta:
-        if {'crossref', 'epmc'} <= FAILED:
-            raise Unreachable(f'{doi}: neither Crossref nor Europe PMC answered')
-        raise Refused(f'{doi}: not found on Crossref or Europe PMC')
+    if not meta:            # a DOI of another registration agency (DataCite, mEDRA): doi.org answers for all
+        meta, outcome = doiorg_meta(doi)
+        if outcome == 'unregistered':           # the only answer that says the DOI does not exist
+            raise Refused(f'{doi}: not a registered DOI (doi.org answers 404 Not Found)')
+        if outcome == 'unreachable':            # exit code 3: whether the DOI exists is not known
+            if {'crossref', 'epmc'} <= FAILED:
+                raise Unreachable(f'{doi}: none of Crossref, Europe PMC and doi.org answered')
+            raise Unreachable(f'{doi}: inconclusive: Crossref and Europe PMC gave no record of it and doi.org '
+                              'gave no answer (no connection, a timeout, 429 or 5xx); try again later')
+        if not meta:
+            raise Refused(f'{doi}: Crossref and Europe PMC gave no record of it and doi.org gives {outcome}; '
+                          'write its entry by hand')
     if args.title and not title_accepted(meta, args.title):
         raise Refused(f'{doi}: the registered title does not match the one given\n'
                       f'  registered: {full_title(meta)}\n  given:      {args.title}')

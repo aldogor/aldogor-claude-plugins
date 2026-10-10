@@ -1,7 +1,7 @@
 ---
 name: aldogor-style
 description: >-
-  Revisione di un testo in due passate, in italiano e in inglese: prima l'impianto (arco logico, sezioni che portano contenuto nuovo, termini orfani, tabelle e figure, coerenza interna), poi la prosa nel registro dell'utente per genere (paper, protocolli e tesi, email e note a un gruppo, messaggi, slide). Usala quando l'utente dice "aldogor-style", "umanizza", "humanize", "revisione di struttura", "togli il tono da AI", o chiede di scrivere o rivedere un'email, un messaggio, o le slide e le note di una lezione, di un talk o di un workshop ("slide", "deck", "lezione", "presentazione").
+  Revisione di un testo in due passate, in italiano e in inglese: prima l'impianto (arco logico, sezioni che portano contenuto nuovo, termini orfani, tabelle e figure, coerenza interna), poi la prosa nel registro dell'utente per genere (paper, protocolli e tesi, email e note a un gruppo, messaggi, slide). Usala quando l'utente dice "aldogor-style", "umanizza", "humanize", "revisione di struttura", "togli il tono da AI", o chiede di scrivere o rivedere un'email, un messaggio, una relazione o un verbale, o le slide e le note di una lezione, di un talk o di un workshop ("slide", "deck", "lezione", "presentazione").
 ---
 
 # Aldogor-style
@@ -18,6 +18,7 @@ Il testo si scrive a partire dal profilo del suo genere, che dice che voce ha:
 
 - paper, abstract, protocolli, tesi, note di progetto, risposte ai reviewer: [references/register-paper.md](references/register-paper.md);
 - email formali e note propositive a un gruppo di lavoro: [references/register-email.md](references/register-email.md);
+- relazioni istituzionali, risposte formali e verbali: [references/register-report.md](references/register-report.md);
 - messaggi brevi: [references/register-chat.md](references/register-chat.md);
 - slide e speaker notes: [references/register-slides.md](references/register-slides.md).
 
@@ -30,7 +31,7 @@ Ciò che l'utente vuole trovare in ogni testo, in italiano come in inglese:
 1. **La cosa com'è.** Il testo descrive l'oggetto nel suo stato attuale e lo definisce in positivo. Chi legge non conosce le versioni precedenti né le scelte di perimetro, quindi il testo non le nomina e non le difende; e non nega interpretazioni che nessuno ha proposto ("sono proposte da scegliere insieme", dove "sono proposte, non un elenco chiuso" si difenderebbe da un'obiezione mai mossa).
 2. **Il contenuto, subito.** Il testo attacca con ciò che ha da dire, senza annunciarsi, senza intestazioni di stato (bozza, documento di lavoro) e senza formule come "per rendere concreto…, ecco come…". I titoli sono asciutti: "L'HIA e la sua pipeline", non "Il contesto: l'HIA e la sua pipeline".
 3. **La frase che dice la cosa.** Ogni affermazione è detta nella sua versione concreta, con le parole di chi descrive l'oggetto. La chiusa di un paragrafo è l'ultimo passo del ragionamento, con la stessa voce delle frasi prima.
-4. **La punteggiatura italiana.** Punto, virgola, due punti, parentesi; i trattini come punteggiatura (—, –, --) non compaiono mai, in nessuna lingua.
+4. **La punteggiatura italiana.** Punto, virgola, due punti, parentesi; i trattini come punteggiatura (—, –, --) non compaiono mai, in nessuna lingua. I due punti introducono ciò che la frase ha annunciato; un'etichetta appesa al suo contenuto («il nodo: ...») diventa una frase intera.
 5. **Parole scelte una per una.** La parola comune non torna due volte a breve distanza; il termine tecnico, che ha un nome solo, si ripete. Il grassetto marca un concetto chiave, raramente.
 
 Prosa curata, lessico colto, un inciso, una frase breve d'enfasi non sono difetti: si corregge ciò che stona e si lascia ciò che è scritto bene.
@@ -39,8 +40,10 @@ Prosa curata, lessico colto, un inciso, una frase breve d'enfasi non sono difett
 
 Quando il testo nasce qui e porterà la firma dell'utente, prima della bozza si chiedono due cose: l'idea che il lettore deve portarsi via, in una frase, e chi legge. Se l'utente le ha già date, non si chiede. Il testo segue l'idea: i contenuti da coprire sono materiale da cui scegliere, e un elenco di contenuti non diventa mai la traccia del testo, perché un testo costruito sull'elenco diventa un inventario.
 
+In Claude Code, prima della bozza si leggono in `~/.claude/style-inbox.md` le coppie dello stesso genere: sono le riscritture dell'utente, e mostrano la sua voce meglio di qualunque regola. Un testo firmato più lungo di un paragrafo parte dalle parole dell'utente quando esistono (una nota dettata, una mail già inviata, i suoi appunti) e si consegna in due stesure costruite su idee diverse, una delle quali scritta dall'agente counsel dove è disponibile, ciascuna con la sua idea dichiarata in una riga.
+
 Quando l'utente corregge la bozza a mano, il giro successivo riparte dal suo testo corretto, non da una stesura nuova, e ogni sua riscrittura resta scritta dove le sessioni successive la trovano (in Claude Code, l'inbox delle correzioni). Una bozza respinta nell'impianto invece non si ritocca: si riparte con due o tre versioni scritte ciascuna da un'idea diversa, dichiarata in una riga, e si consegnano senza raccomandazione. La versione scelta entra nel brief come riferimento.
 
 ## Consegna
 
-Se si modifica un file, si applicano le modifiche e si dà un riepilogo compatto. I profili crescono con le correzioni a mano dell'utente, che le distilla con aldogor-style-learn.
+Se si modifica un testo scritto o approvato dall'utente, le modifiche si mostrano prima e dopo e si applicano su sua parola; poi un riepilogo compatto. I profili crescono con le correzioni a mano dell'utente, distillate a ogni ciclo di manutenzione della configurazione.

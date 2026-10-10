@@ -14,7 +14,7 @@ In Claude Code, `scripts/literature.py` in this skill's folder manages the folde
 
 | Command | What it does |
 | --- | --- |
-| `add DOI [--key K] [--cited-in T] [--title T] [--note T] [--pdf PATH]` | a new entry from Crossref (or Europe PMC), and the legal open-access full text or else the abstract in its Markdown; `--note` becomes the summary when no abstract exists; the first `add` in a project creates the library and its `.gitignore` lines |
+| `add DOI [--key K] [--cited-in T] [--title T] [--note T] [--pdf PATH]` | a new entry from Crossref (or Europe PMC, or doi.org for a DOI registered with another agency such as DataCite), and the legal open-access full text or else the abstract in its Markdown; `--note` becomes the summary when no abstract exists; the first `add` in a project creates the library and its `.gitignore` lines |
 | `fetch [KEY ...]` | tries the open-access sources again for the works whose full text is not in the folder, and writes their Markdown |
 | `collect [--from DIR]` | files the PDFs the user downloaded in the browser (default: Downloads), identified by key, DOI or title |
 | `md [KEY ...] [--force]` | rewrites `<key>.md` from the PDF; a work without a PDF gets a missing Markdown from its summary or metadata |
@@ -24,7 +24,7 @@ In Claude Code, `scripts/literature.py` in this skill's folder manages the folde
 
 `--json`, before the command, prints one JSON object on standard output and the messages on standard error. Exit codes: 0 done, 1 check found problems, 2 refused (usage, a DOI or key that does not fit, no library, an unreadable record), 3 a source the command needs could not be reached. The tests run on the fixtures in `scripts/fixtures/`.
 
-The script fetches only legal free copies (the PMC open-access set, Europe PMC, the open locations OpenAlex and Semantic Scholar list, and a local folder given with `--archive`), never through an institutional login, never from ScienceDirect or Wiley by script, and stops at any anti-bot check; the user downloads those copies in the browser and `collect` files them. A PDF is kept only when the work's title is printed on its first pages.
+The script fetches only legal free copies (the PMC open-access set, Europe PMC, the open locations OpenAlex and Semantic Scholar list, and a local folder given with `--archive`), never through an institutional login, never from ScienceDirect or Wiley by script, and stops at any anti-bot check; the user downloads those copies in the browser and `collect` files them. A PDF is kept only when the work's title is printed on its first pages. OpenAlex meters its API against a daily budget: a free OpenAlex API key in the environment variable `OPENALEX_API_KEY` raises it tenfold, and when the budget is spent the script says so once and goes on without OpenAlex.
 
 A source without a DOI (a report, a web page) is an entry written by hand: `id`, `type`, `title`, `author` (an organisation as `{"literal": "World Health Organization"}`), `issued`, `publisher` or `container-title`, `URL`, and `custom.summary` when it has no abstract. Its PDF placed in the folder as `<key>.pdf` gets its Markdown with `md <key>`. After a hand edit, `check` reports anything out of the script's layout, and `check --fix` puts it back.
 

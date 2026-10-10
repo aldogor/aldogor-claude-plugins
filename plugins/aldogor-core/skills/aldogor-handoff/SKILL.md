@@ -41,6 +41,10 @@ The project also has to follow the conventions of the setup, which change over t
 - Safe fixes are applied directly: dead references, stale lines, contradictions where the session makes the current state clear, and small convention fixes (a missing closing line in the journal, a `.gitignore` line, the practice line in CLAUDE.md).
 - Renames, moves, merges, deletions, contradictions where it is unclear which side is current, and conversions that reshape the project (a literature folder or a journal to convert) go to the user as a short list, one line each with the reason, and wait for approval; what the user defers becomes an item of the open list.
 
+**What the session added.** Files are born inside sessions, so the close reviews them: list the files new since the session began (committed during it or untracked), each with its proposed fate. The default is that its content joins the document that already owns it and the file is deleted; a file stays where no document owns its content and its folder is described in CLAUDE.md. The list joins the proposals above and waits for the same approval.
+
+**The user's rewrites.** In Claude Code, every passage the user rewrote by hand during the session goes to the style inbox (`~/.claude/style-inbox.md`) as a before and after pair, with date, project and genre, unless the session already put it there.
+
 Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as historical are read, never edited. The review of a whole folder (naming, grouping, staleness across the tree) is the tidy pass of aldogor-project-setup, in Claude Code.
 
 ## 5. Git
@@ -53,7 +57,7 @@ When the project is a git repository and the session can run commands, settle it
 
 Other rules the repository sets (no remote, who merges) hold too. Where no practice is named, propose the one that fits the project and write it into CLAUDE.md on the user's word. Without a shell, this step does not apply.
 
-1. **Leftovers.** From `git status`, `git stash list` and `git branch --merged`, list what is changed, untracked or stashed but is not the session's finished work, and the local branches already merged but not deleted, each with what it is. The user decides for each: commit it, keep it for later, or discard it; discarding waits for an explicit word, because it cannot be undone.
+1. **Leftovers.** From `git status`, `git stash list` and `git branch --merged`, list what is changed, untracked or stashed but is not the session's finished work, and the local branches already merged but not deleted, each with what it is. The user decides for each: commit it, keep it for later, or discard it; discarding waits for an explicit word, because it cannot be undone. A prose file the user changed by hand since Claude last wrote it is also a correction: in Claude Code, offer its before and after for the style inbox.
 2. **Commit** the session's finished work, the updated documents included: message in the repository's language and style, nothing secret and no `.env` staged.
 3. **Branch or worktree.** If the session worked outside the main branch, the work lands as the practice says: merged once its tests pass, or through a pull request; work not ready stays on its branch, and the open list says so. After a merge, delete the branch with `git branch -d` (it refuses an unmerged one) and the worktree, and offer to delete the remote branch. In a worktree that the desktop app manages, its own sync with the base branch comes before any manual merge.
 4. **Sync.** Fetch. If the remote has commits the local branch lacks, integrate them before pushing (a rebase in a repository only the user commits to, a merge or a pull request where the repository's rules say so) and report any conflict to the user instead of resolving it by guesswork.
@@ -61,7 +65,7 @@ Other rules the repository sets (no remote, who merges) hold too. Where no pract
 
 ## 6. The continuation prompt
 
-Three to five lines, written once the steps above are done:
+Three to five lines in one fenced block, ready to paste, written once the steps above are done. The prompt names any rename or move the session made, and leaves the push out when the user pushes by hand:
 
 1. What to read first, by name or path: the state document and, if needed, one or two authoritative files; in a project with a journal, its open list (`## Open` or `## Aperto`, at the end) and the canonical document.
 2. Where the work stands, in one sentence.
