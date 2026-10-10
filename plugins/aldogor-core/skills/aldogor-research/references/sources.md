@@ -6,7 +6,15 @@
 
 **PubMed (MCP).** `PubMed:search_articles` (full PubMed syntax: `[Title]`, `[MeSH Terms]`, `[Publication Type]`, boolean operators, date ranges), `PubMed:lookup_article_by_citation`, `PubMed:get_article_metadata`, `PubMed:get_full_text_article` (PMC open-access only), `PubMed:find_related_articles`, `PubMed:convert_article_ids` (PMID/PMCID/DOI). Biomedical only.
 
-**OpenAlex (HTTPS, free key recommended).** Any-field coverage, preprints, citation graph.
+**OpenAlex (MCP connector).** Any-field coverage, preprints, citation graph, run on the user's OpenAlex account and its daily budget.
+- `OpenAlex:search_works`: `mode` keyword (Boolean syntax), semantic (by meaning, for descriptive queries, up to 50 results) or exact; filters for years, types, open access, citations, authors, institutions, sources, topics; `oql` for queries the filters cannot express; `preview: true` returns the count, the canonical OQL and a sample, the cheap way to tune a query. Every response carries the canonical OQL and a reproduce_url, which go into a search log verbatim. Relevance-sorted results are reranked by default, at twice the cost of a plain search.
+- `OpenAlex:get_work`: the full record of one work by DOI, PMID, PMCID or OpenAlex ID (free).
+- `OpenAlex:resolve_references`: up to 25 references per call, DOIs, PMIDs or free-text citations, each with what it matched and, for free text, a confidence (exact, likely, uncertain, none).
+- `OpenAlex:list_citations`: the works citing a work, the works it cites, or related works.
+- `OpenAlex:find_keywords` then `OpenAlex:keyword_search`: a high-recall search by facets, with counts of what each facet's text and keywords add and random samples to judge precision.
+- Retracted works are hidden by default: a verification or screening search sets `include_retracted: true`, so that a retracted source is found and reported. When the day's budget is spent, single-record lookups still work and the rest resumes at midnight UTC.
+
+**OpenAlex (HTTPS, free key recommended).** The API itself, for scripts and for sessions without the connector.
 - Search: `https://api.openalex.org/works?search=TERMS&per-page=25&select=id,doi,title,publication_year,cited_by_count,primary_location,authorships` (the `select` list keeps a page of 25 works to a few KB; add `type` or `open_access` when needed)
 - By DOI: `https://api.openalex.org/works/doi:10.xxxx/yyyy`
 - Citation graph: `referenced_works` (outgoing) and `cited_by_api_url` (incoming) on any work object.
@@ -16,7 +24,7 @@
 
 **Unpaywall (HTTPS).** OA copy lookup: `https://api.unpaywall.org/v2/10.xxxx/yyyy?email=USER_EMAIL`. Rejects placeholder emails (HTTP 422). Use `best_oa_location.url_for_pdf`.
 
-Connector tool names are session-dependent (UUID-prefixed internally); the `PubMed:`/`Consensus:` forms above are the stable names to look up.
+Connector tool names are session-dependent (UUID-prefixed internally); the `PubMed:`, `Consensus:` and `OpenAlex:` forms above are the stable names to look up.
 
 ## Etiquette and safety
 
