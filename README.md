@@ -10,6 +10,7 @@ Claude plugins by Aldo Gorga, a public health researcher working on digital heal
 - `aldogor-style`: a two-pass review, structure then prose, with voice profiles by genre (scientific prose, email, messages, slides) and a check against the reporting guideline of the study design.
 - `aldogor-handoff`: closes a working session, brings the journal and the project's documents up to date and writes a continuation prompt.
 - `aldogor-grill`: resolves open decisions by rounds of questions with a recommended answer, or turns them into a questionnaire for someone else.
+- `aldogor-drive`: works in the Google Drive documents colleagues edit, as the user: reads a Doc with its suggestions and comment threads, proposes changes as suggestions and comments after one approval per document, and moves a text from a repository into a Google Doc.
 
 **aldogor-code**, for Claude Code only:
 

@@ -22,7 +22,7 @@ Il testo si scrive a partire dal profilo del suo genere, che dice che voce ha:
 - messaggi brevi: [references/register-chat.md](references/register-chat.md);
 - slide e speaker notes: [references/register-slides.md](references/register-slides.md).
 
-I post LinkedIn hanno un registro proprio, nella skill di progetto aldogor-linkedin di aldogor-job-hunting. Gli altri generi seguono il paragrafo sull'italiano e i cinque punti qui sotto.
+I post LinkedIn hanno un registro proprio, nella skill di progetto aldogor-linkedin di aldogor-job-hunting. Gli altri generi seguono il paragrafo sull'italiano e i sei punti qui sotto.
 
 Un testo italiano si pensa in italiano fin dalla prima stesura. Ogni frase dice per prima la sua affermazione principale; i numeri e i dettagli che la sostengono vengono dopo, e ciò che non le serve passa in un'altra frase o esce dal testo. Il nesso tra una frase e la successiva è scritto (quindi, pertanto, inoltre, un soggetto che riprende la frase precedente), e la lunghezza di ogni frase la decide il suo contenuto. Il lessico è quello italiano proprio (*agenda di ricerca*, *risultati*, *principale*); restano in inglese i termini tecnici consolidati del dominio (framework, machine learning, scoping review, human in the loop). Un testo breve porta un'idea sola.
 
@@ -30,9 +30,10 @@ Ciò che l'utente vuole trovare in ogni testo, in italiano come in inglese:
 
 1. **La cosa com'è.** Il testo descrive l'oggetto nel suo stato attuale e lo definisce in positivo. Chi legge non conosce le versioni precedenti né le scelte di perimetro, quindi il testo non le nomina e non le difende; e non nega interpretazioni che nessuno ha proposto ("sono proposte da scegliere insieme", dove "sono proposte, non un elenco chiuso" si difenderebbe da un'obiezione mai mossa).
 2. **Il contenuto, subito.** Il testo attacca con ciò che ha da dire, senza annunciarsi, senza intestazioni di stato (bozza, documento di lavoro) e senza formule come "per rendere concreto…, ecco come…". I titoli sono asciutti: "L'HIA e la sua pipeline", non "Il contesto: l'HIA e la sua pipeline".
-3. **La frase che dice la cosa.** Ogni affermazione è detta nella sua versione concreta, con le parole di chi descrive l'oggetto. La chiusa di un paragrafo è l'ultimo passo del ragionamento, con la stessa voce delle frasi prima.
+3. **La frase che dice la cosa.** Ogni affermazione è detta nella sua versione concreta, con le parole di chi descrive l'oggetto. La forma corrente vince su quella costruita: «rifiutare non è un'opzione», dove «non è fra le risposte» sarebbe una girata letteraria; «di cui sarò facilitatore», dove «che avrò il piacere di facilitare» sarebbe una formula; «in stampa e in video», dove «stampe e un video con il suo suono» sarebbe un inventario. Corrente non vuol dire povera: la parola è quella che userebbe chi conosce bene l'oggetto. La chiusa di un paragrafo è l'ultimo passo del ragionamento, con la stessa voce delle frasi prima.
 4. **La punteggiatura italiana.** Punto, virgola, due punti, parentesi; i trattini come punteggiatura (—, –, --) non compaiono mai, in nessuna lingua. I due punti introducono ciò che la frase ha annunciato; un'etichetta appesa al suo contenuto («il nodo: ...») diventa una frase intera.
 5. **Parole scelte una per una.** La parola comune non torna due volte a breve distanza; il termine tecnico, che ha un nome solo, si ripete. Il grassetto marca un concetto chiave, raramente.
+6. **Ciò che il lettore sa già non si spiega.** Che cosa un testo spiega lo decide chi lo legge: niente glosse dei termini che il lettore usa ogni giorno, niente racconto di come il testo è stato costruito, niente articoli e commi letti per esteso a chi conosce la norma, niente dettagli aggiunti solo perché sono disponibili.
 
 Prosa curata, lessico colto, un inciso, una frase breve d'enfasi non sono difetti: si corregge ciò che stona e si lascia ciò che è scritto bene.
 

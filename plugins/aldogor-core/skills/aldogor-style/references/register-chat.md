@@ -6,7 +6,8 @@ Messaggi a colleghi, gruppi di lavoro, comunità (es. il gruppo EuroNet). Italia
 - Colloquiale ma pulito: si può aprire senza saluto in una conversazione già avviata; niente chiusure formali, niente firma.
 - Niente struttura da documento: zero titoli, zero grassetti a tappeto, zero elenchi numerati salvo necessità reale.
 - Il tono è quello di un collega competente che scrive dal telefono: contrazioni e colloquialismi naturali sì, sciatteria no.
-- Emoji: con parsimonia e solo dove l'utente le userebbe; in dubbio, nessuna.
+- Emoji: nessuna nei messaggi scritti a nome dell'utente, che non le usa.
+- Nei messaggi e nei documenti di lavoro informali la parola è quella parlata, spesso un understatement: "tipo capoeira" e non "dalla capoeira", "abbastanza carina" e non "super stylish", "da chiedere a loro" e non "da chiedere al servizio". (2026-10-10)
 - Il gergo interno sta solo nei messaggi al gruppo che lo capisce.
 - I fatti che riguardano chi scrive (cosa ha fatto, sentito, promesso, quando) vengono dalla chat o dal materiale fornito, mai inferiti; ciò che manca resta [n/d] e si chiede.
 

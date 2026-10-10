@@ -43,7 +43,7 @@ When the project has data (analyses, extractions, datasets), add the data subtre
 
 Literature: one flat folder, `literature/` (`docs/literature/` in a development repository whose research side lives in `docs/`), managed with the literature script of aldogor-research (`scripts/literature.py`, described in its references/literature.md). `bibliography.json`, a CSL JSON array that Pandoc reads as it is, is the record and the only file of the folder git tracks; each source's `<key>.pdf` and `<key>.md` stay local (`.gitignore`: `literature/*` and `!literature/bibliography.json`), because publishers' PDFs and their text cannot be passed on and a committed file stays in the history. Keys are `Surname_Year`, with b and c for a second and third work of the same author and year. The first source added creates the folder and its `.gitignore` lines.
 
-Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. Superseded documents and the imported claude.ai history also live in `archive/`.
+Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. A document whose home is Google Drive gets its dated copy in `archive/` at each milestone (a version sent, submitted or approved): a Google Doc exported as Markdown once no suggestion is pending, a Word or Excel file as the file itself, as aldogor-drive describes. Superseded documents and the imported claude.ai history also live in `archive/`.
 
 Development projects take their stack's layout: `src/`, `tests/`, `scripts/`, `docs/`, and the folders the stack itself brings (`public/` and `assets/` on the web, `app/` and `gradle/` on Android). In any project, a top-level folder outside these trees gets its line in CLAUDE.md saying what it holds: a folder the project needs is described there, and one nobody can describe is drift. The conventions check of aldogor-handoff reports the folders CLAUDE.md does not describe.
 
@@ -104,7 +104,7 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 
 ## Project CLAUDE.md
 
-Offer a starter CLAUDE.md: what the project is (2-3 sentences), where authority lives (which doc owns what), the 3-5 rules easiest to break by accident, the conventions above, and a "Key files" ("File chiave") list with one line per file saying what it holds and when to update it. The journal appears once, in the authority table or in the key files, never in both. Its line reads, in the project's language (adapt the canonical document's name):
+Offer a starter CLAUDE.md: what the project is (2-3 sentences), where authority lives (which doc owns what, with one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, the conventions above, and a "Key files" ("File chiave") list with one line per file saying what it holds and when to update it. The journal appears once, in the authority table or in the key files, never in both. Its line reads, in the project's language (adapt the canonical document's name):
 
 ```markdown
 - `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its closing "Open" list is the project's state.
@@ -113,6 +113,8 @@ Offer a starter CLAUDE.md: what the project is (2-3 sentences), where authority 
 Italian: "`JOURNAL.md`: registro datato di verifiche, decisioni intermedie e questioni aperte (il *perché*; git tiene il *cosa è cambiato*). Aggiornarlo a ogni sessione che verifica o decide qualcosa, con la data; l'elenco "Aperto" in fondo è lo stato del progetto."
 
 Keep it lean; facts and invariants, not tutorials. The README's structure tree lists the journal with the same one-line role.
+
+A document lives where its next version is made. A text that colleagues co-write in Google Drive has its home there, and the repository keeps of it only the dated frozen copies in `archive/`; a document built by a script, from the bibliography or by the user's own rewriting keeps its home in the repository and sends Drive a compiled copy of each version. The aldogor-drive skill covers the work inside Drive.
 
 ## History from a claude.ai project (optional)
 

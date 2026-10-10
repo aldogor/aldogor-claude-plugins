@@ -21,6 +21,8 @@ Di solito il registro è propositivo più che impositivo, quanto lo consentono l
 
 Spesso la mail si apre con lo stato del lavoro in una riga e la richiesta arriva subito dopo, in prima persona ("Rapido aggiornamento. [...] Ho preparato quello che consegnerei a TRIP tramite il modulo, vorrei solo un ok e un feedback da parte di tutti"). Un termine concreto dice l'urgenza meglio di una motivazione ("Lo invierei entro stasera"); materiali e note restano pochi, in coda. (2026-09-22)
 
+Con chi è già dentro il lavoro, un superiore o il gruppo, chi scrive di solito riferisce in prima persona che cosa ha fatto e perché ("Io ho scelto 'utilizza' e non 'usa', visto che c'era da uniformare"), dice ciò che non sa ("Io su questo non ho informazioni") e i dubbi che restano ("da capire se è una cosa fattibile"), e mette la propria posizione al condizionale ("rinvierei all'azienda"): riferisce il lavoro fatto, non annuncia decisioni. (2026-10-10)
+
 Quando la decisione spetta al gruppo o ad altri (fondi, abbonamenti, scelte di metodo), la mail di solito espone i fatti e si ferma prima della raccomandazione: niente cifre o prodotti consigliati, niente offerte di lavoro in più, niente premesse sulla struttura della mail, una sola chiusura breve. Una concessione onesta rende l'argomento più credibile ("per quanto ci sia un minimo livello di compatibilità"). (2026-08-17)
 
 ### Note propositive a un gruppo di lavoro
