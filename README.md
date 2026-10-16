@@ -16,7 +16,8 @@ Claude plugins by Aldo Gorga, a public health researcher working on digital heal
 
 - `aldogor-project-setup`: scaffolds a project (research or development) and keeps an existing one in order.
 - `aldogor-share`: before collaborators are invited or a repository goes public, checks what git will not send and what the history holds, and writes the project conventions into `CLAUDE.md`; publishes a repository's public version from its private one, through an include-list (`publish.txt`) and a sibling clone.
-- `aldogor-counsel`: an agent on Fable that the main session consults for a second perspective on decisions, plans, visual ideas and drafts.
+- `aldogor-second-opinion`: second opinions from other models on a text, a design, a method, code or a deck. Fable answers by default, through the agent below. GPT and Gemini, when named, run through their own command-line tools (Codex CLI and Antigravity CLI, signed in with the user's subscriptions) on a packet of copies the user approves; each returns a review or, for signed prose, an alternative draft, shown next to Claude's own view, which Claude writes first.
+- `aldogor-second-opinion-fable`: an agent on Fable that the main session consults for a second perspective on decisions, plans, visual ideas and drafts, on its own initiative or as one of the reviewers of `aldogor-second-opinion`.
 
 ## Install
 

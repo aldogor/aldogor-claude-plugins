@@ -1,6 +1,6 @@
 {
   "name": "aldogor-core",
-  "version": "0.19.0",
+  "version": "0.19.1",
   "description": "Aldo's skills for Claude Code and claude.ai: document structure and prose in one style pass (slide text included), grounded research, session handoff, plan grilling and recipient questionnaires, work in Google Drive documents that colleagues edit",
   "author": {
     "name": "Aldo Gorga"
