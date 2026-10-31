@@ -43,7 +43,7 @@ The project also has to follow the conventions of the setup, which change over t
 
 **What the session added.** Files are born inside sessions, so the close reviews them: list the files new since the session began (committed during it or untracked), each with its proposed fate. The default is that its content joins the document that already owns it and the file is deleted; a file stays where no document owns its content and its folder is described in CLAUDE.md. The list joins the proposals above and waits for the same approval.
 
-**The user's rewrites.** In Claude Code, every passage the user rewrote by hand during the session goes to the style inbox (`~/.claude/style-inbox.md`) as a before and after pair, with date, project and genre, unless the session already put it there.
+**The user's rewrites.** In Claude Code, every passage the user rewrote by hand during the session goes to the style inbox (`~/.claude/style-inbox.md`) as a before and after pair, with date, project, genre, whether the draft came from aldogor-style and how many passages of that text the user rewrote, unless the session already put it there.
 
 Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as historical are read, never edited. The review of a whole folder (naming, grouping, staleness across the tree) is the tidy pass of aldogor-project-setup, in Claude Code.
 
