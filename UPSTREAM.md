@@ -78,8 +78,25 @@ do not need an entry: Superpowers, skill-creator.
 - What was deliberately dropped: the MCP server layer; CJEU case law, EuroVoc, the citation graph, LEGISSUM summaries and the raw SPARQL tool of eurlex-mcp-server; normattiva-mcp's article enumeration by probing, its recent-updates search and its 0.2 portal and AKN reading.
 - License notes: both MIT (adaptation permitted with attribution; attribution kept here and in the script's docstring).
 
+## aldogor-pseudonymize (scripts/vendor/rizzo_pii, scripts/pz_engine.py, scripts/data/comuni_it.txt)
+- Vendored from: Rizzo-AI-Academy/rizzo-pii @ 30d6f9c675e245bc8494df959adaeaa9d8de35c7: `src/app/detectors.py` unchanged (sha256 9b80026806911d3836ab7baaa553f36a3309314c18c66a0a4009c4133f6e0135) in `scripts/vendor/rizzo_pii/`, with its `LICENSE` and four of its tests (`test_carta_scadenza`, `test_detector_formats`, `test_docid_e_date`, `test_iban_formato_stampa`), whose only change is the path to the module.
+- Adapted from the same commit: `chunk_text`, the model call and `_merge` of `src/app/app.py`, rewritten in `scripts/pz_engine.py` (`chunk_text`, `RizzoDetector`, `merge`), with this plugin's rules, project table and filters around them.
+- Model: rizzoaiacademy/rizzo-pii-0.3B at revision a1c3c83827eca22e9675e30c1111c4641caf5901 (tag v1.5.0), MIT, on jhu-clsp/mmBERT-base (MIT); downloaded by `setup` into the plugin's data folder, JSON and safetensors files only.
+- Data: `scripts/data/comuni_it.txt`, the active municipalities of the ANPR archive (italia/anpr, `src/archivi/ANPR_archivio_comuni.csv`, downloaded 2026-10-22), CC BY 4.0, attribution in the file's header.
+- Ideas only, no code: EU-ECDC/Medical-Redactor (EUPL-1.2, read 2026-10-22): dates kept in clear in lab tables, corrections at review fed back into the lists. noirdoc-ai/mask-claude-plugin (MIT, read 2026-10-21): the guard on a folder of originals and the threat-model table of what a plugin can and cannot stop.
+- Date reviewed: 2026-10-22, shipped 2026-11-01.
+- What was deliberately dropped: rizzo-pii's web app and API layer; the GLiNER and Presidio detectors compared during the evaluation.
+- License notes: MIT (code and model), CC BY 4.0 (municipalities); nothing from redact-restore (AGPL-3.0) or Medical-Redactor (EUPL-1.2) is copied.
+
 ## Superpowers (reference package, tuning record)
-- Package: superpowers@claude-plugins-official 6.4.1 at project scope since 2026-09-19 to 29 (obra/superpowers; 6.3.0 from 2026-09-14, 6.2.0 from 2026-08-05), installed from the official marketplace, never vendored; 6.4.2 (2026-09-25) waits for the marketplace.
-- Date reviewed: 2026-08-05 (full 14-skill analysis in the session record; upstream v6.2.0 notes describe an ongoing "compression campaign" reducing prescriptiveness).
-- Tuning applied on our side only: never enabled at user scope; enabled per project in this repo and in the development projects (installed by aldogor-project-setup), so research projects load none of it. The `false` entries left in the settings of older research repos are inert. Counter-pressure for its verification-heavy skills lands in the "How to work" section of home/CLAUDE.md. skillOverrides cannot target plugin skills (documented limitation), so no per-skill downgrades exist to break on upstream updates.
-- Re-check at the quarterly backport review: which projects still use it, from the invocation counts in the transcripts.
+- Package: superpowers@claude-plugins-official (obra/superpowers), installed from the official marketplace at project scope, never vendored: 7.0.0 (bb92a77741419a4ab5f06e711a283343f1ada0c3) or 6.4.1 according to the folder; 7.0.1 (2026-10-21) waits for the marketplace.
+- Date reviewed: 2026-11-01, every skill of 7.0.0 and its SessionStart hook, with its use in the transcripts over 90 days (27 skill calls, 16 of them in August) and what its users, its maintainer and Anthropic have said of it; earlier review 2026-08-05 at 6.2.0.
+- Tuning applied on our side only: never enabled at user scope; enabled at project scope in the app repositories, where aldogor-project-setup installs it for development projects, and disabled in the research, teaching and infra repositories, this one included, whose `false` entries are inert. skillOverrides cannot target plugin skills (documented limitation), so no per-skill downgrades exist to break on upstream updates.
+- Re-check at the quarterly backport review: in each app repository the first feature planned decides whether plan mode replaces it; once no project enables it, one uninstall removes every record.
+
+## This repository's rules for writing skills (the form of a line; a line answers a failure on record)
+- Distilled from: obra/superpowers @ bb92a77741419a4ab5f06e711a283343f1ada0c3, skills/writing-skills/SKILL.md ("Match the Form to the Failure"; the baseline run before a skill is written)
+- Date reviewed: 2026-11-01
+- What was taken: the form of a guidance line chosen by the failure it fixes (an element that goes missing gets a slot in the template, conditional behaviour gets an observable condition, an exception becomes a condition of its own rather than a clause appended to the rule); a line that shapes behaviour answers a failure on record, which Anthropic's skill authoring guide also asks through evaluations built against a baseline.
+- What was deliberately dropped: the rest of writing-skills (descriptions limited to triggering conditions, bulletproofing with rationalisation tables and persuasion principles, the iron law that deletes an untested skill) and the package's other skills.
+- License notes: MIT, Copyright (c) 2025 Jesse Vincent; ideas reworded, no text copied.

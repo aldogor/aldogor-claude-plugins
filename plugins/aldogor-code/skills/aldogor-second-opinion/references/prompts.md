@@ -35,5 +35,5 @@ Write your own version of [what: the letter to the scientific societies, the abs
 - Follow the register and the writing rules in context.md.
 - Keep to about [n] words, as the source does.
 
-Reply with three parts: one line stating the idea your draft is built on; the draft; at most three lines on how it differs from the source. Give everything as your reply; do not create or edit any file.
+Reply with three parts: one line stating the idea your draft is built on; the draft; a short note on how it differs from the source. Give everything as your reply; do not create or edit any file.
 ```

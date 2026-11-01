@@ -1,0 +1,159 @@
+# Terms never masked, in every project: a detection that overlaps one of them is dropped, unless it is an
+# identifier whose check digit passes. Acronyms in capitals match in capitals only; the rest in any case.
+# A project adds its own in .pseudonymize/keep.txt.
+
+# Health authorities, institutions and bodies
+ASL
+Azienda Sanitaria Locale
+TO3
+TO4
+TO5
+CN1
+CN2
+VCO
+ASL Città di Torino
+ASL TO3
+ASL TO4
+ASL TO5
+ASL AL
+ASL AT
+ASL BI
+ASL CN1
+ASL CN2
+ASL NO
+ASL VC
+ASL VCO
+AOU
+ASO
+AO
+Regione Piemonte
+Ministero della Salute
+Istituto Superiore di Sanità
+ISS
+AGENAS
+AIFA
+INPS
+INAIL
+ARPA
+ATS
+Prefettura
+Tribunale
+Comune
+Consorzio
+Unione Montana
+
+# Organization of a health authority
+Direzione Generale
+Direzione Sanitaria
+Direzione Amministrativa
+Direzione Medica
+Dipartimento
+Distretto
+Struttura Complessa
+Struttura Semplice
+Struttura Semplice Dipartimentale
+SC
+SS
+SSD
+SOC
+SOS
+UOC
+UOS
+UOSD
+Casa di Comunità
+Case di Comunità
+Ospedale di Comunità
+Centrale Operativa Territoriale
+COT
+PUA
+Poliambulatorio
+Consultorio
+Pronto Soccorso
+Guardia Medica
+Continuità Assistenziale
+Collegio Sindacale
+Comitato Unico di Garanzia
+CUG
+OIV
+RSU
+RSPP
+RLS
+DPO
+RPD
+RPCT
+URP
+CUP
+Ufficio Protocollo
+Ufficio Personale
+SPP
+
+# Services, units and programmes
+ADI
+ADP
+UVG
+UVM
+UMVD
+UVMD
+CSM
+SerD
+SERD
+SPDC
+DSM
+NPI
+UONPIA
+CPS
+RSA
+RAF
+CAVS
+IFeC
+OSS
+MMG
+PLS
+TSO
+ASO
+LEA
+FSE
+PNRR
+PNP
+PRP
+DGR
+DPCM
+DM 77
+ISEE
+SDO
+NRE
+Day Hospital
+Day Surgery
+Week Surgery
+Day Service
+
+# Clinical scales and conditions that read as names
+ADL
+IADL
+MMSE
+BPCO
+SLA
+Alzheimer
+Parkinson
+Down
+Crohn
+Hodgkin
+Asperger
+Huntington
+Creutzfeldt-Jakob
+Guillain-Barré
+Tourette
+Basedow
+Hashimoto
+Addison
+Cushing
+Kaposi
+Duchenne
+Raynaud
+Sjögren
+Lyme
+Ménière
+Paget
+malattia di Wilson
+Covid
+SARS-CoV-2

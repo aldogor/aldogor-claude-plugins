@@ -14,7 +14,7 @@ Route by intent (details and API traps in [references/sources.md](references/sou
 
 | Need | Tool |
 | --- | --- |
-| Evidence question ("does X work?"), broad sweep | Consensus:search (200M+ papers; study-type, year, journal filters) |
+| Evidence question ("does X work?"), broad sweep | Consensus:search (study-type, year and journal filters) |
 | Biomedical precision search, MeSH, full text | PubMed:search_articles, PubMed:get_full_text_article |
 | Verify citations exist / resolve metadata | OpenAlex:resolve_references (up to 25 per call, DOIs or free text); PubMed:lookup_article_by_citation; Crossref by DOI (HTTPS) |
 | Any-field coverage, preprints, citation graph | OpenAlex:search_works (keyword, semantic or exact), OpenAlex:get_work, OpenAlex:list_citations; without the connector, the OpenAlex API (HTTPS, free key) |

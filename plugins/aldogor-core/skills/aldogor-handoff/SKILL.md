@@ -45,7 +45,7 @@ The project also has to follow the conventions of the setup, which change over t
 
 **The user's rewrites.** In Claude Code, every passage the user rewrote by hand during the session goes to the style inbox (`~/.claude/style-inbox.md`) as a before and after pair, with date, project, genre, whether the draft came from aldogor-style and how many passages of that text the user rewrote, unless the session already put it there.
 
-Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as historical are read, never edited. The review of a whole folder (naming, grouping, staleness across the tree) is the tidy pass of aldogor-project-setup, in Claude Code.
+Dated frozen copies (in `archive/`), `data/raw/` and anything CLAUDE.md marks as historical are read, never edited. The review of a whole folder (naming, grouping, staleness across the tree) is aldogor-tidy's, in Claude Code: when this pass finds disorder that runs beyond what the session touched, offer it among the proposals, and on the user's yes run it before the git step.
 
 ## 5. Git
 

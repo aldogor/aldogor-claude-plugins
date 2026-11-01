@@ -2,7 +2,7 @@
 
 ## Endpoints
 
-**Consensus (MCP).** `Consensus:search`. Covers Semantic Scholar, PubMed, Scopus, ArXiv. Use its filters only when the question calls for them: `study_types` (rct, meta-analysis, systematic review...), `year_min`, `exclude_preprints`, `medical_mode` (top clinical journals). Best first call for evidence questions; not a substitute for a documented systematic search.
+**Consensus (MCP).** `Consensus:search`. Searches peer-reviewed papers drawn from Semantic Scholar, OpenAlex and PubMed. Use its filters only when the question calls for them: `study_types` (rct, meta-analysis, systematic review...), `year_min`, `exclude_preprints`, `medical_mode` (top clinical journals). Best first call for evidence questions; not a substitute for a documented systematic search.
 
 **PubMed (MCP).** `PubMed:search_articles` (full PubMed syntax: `[Title]`, `[MeSH Terms]`, `[Publication Type]`, boolean operators, date ranges), `PubMed:lookup_article_by_citation`, `PubMed:get_article_metadata`, `PubMed:get_full_text_article` (PMC open-access only), `PubMed:find_related_articles`, `PubMed:convert_article_ids` (PMID/PMCID/DOI). Biomedical only.
 

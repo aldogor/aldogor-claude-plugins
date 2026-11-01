@@ -30,7 +30,7 @@ this script changes with them, in the same commit. It reads the repository and c
   - every plugin that .claude/settings.json (or settings.local.json) enables is installed for this folder: the
     settings file enables plugins but installs nothing, and each machine records its installs per folder in
     ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist).
-Naming, stale content and the grouping of files are judgments, left to the tidy pass of aldogor-project-setup.
+Naming, stale content and the grouping of files are judgments, left to aldogor-tidy.
 
 Usage:
   python check_project.py [PATH] [--fetch] [--no-github]

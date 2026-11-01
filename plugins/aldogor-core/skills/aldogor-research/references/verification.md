@@ -43,7 +43,7 @@ Claim-level, when auditing a document:
 | UNVERIFIABLE | cannot confirm or deny | mark in text |
 | UNVERIFIABLE_ACCESS | source exists but is paywalled/unreachable | no: mark, do not treat as wrong |
 
-Marking in text: either the explicit tag ("...reduces incidence [unverified]") or the safer rewrite: downgrade the claim to what IS verifiable ("two studies report an association..." instead of an unverifiable causal claim). Prefer the safer rewrite in deliverables, the tag in drafts. Hedging is not a downgrade: "may", "some evidence suggests" or "it is reported that" in front of an unverified claim leaves it unverified; the rewrite states only what a verified source states, or carries the tag.
+Marking in text: either the explicit tag ("...reduces incidence [unverified]") or the safer rewrite: downgrade the claim to what is verifiable ("two studies report an association..." instead of an unverifiable causal claim). Prefer the safer rewrite in deliverables, the tag in drafts. Hedging is not a downgrade: "may", "some evidence suggests" or "it is reported that" in front of an unverified claim leaves it unverified; the rewrite states only what a verified source states, or carries the tag.
 
 ## Sampling for long documents
 
