@@ -68,6 +68,16 @@ do not need an entry: Superpowers, skill-creator.
 - What was deliberately dropped: the per-folder MYVOICE.md, the "final piece" trigger, the single-file profile.
 - License notes: MIT (adaptation permitted with attribution; attribution kept here).
 
+## aldogor-legislation (scripts/legislation.py)
+- Distilled from: Honeyfield-Org/eurlex-mcp-server @ 78e0dbde6fa11fa4b88b7ebac6bee52bbb5ba9a9; adellorto/normattiva-mcp @ abfee4d7e10647096156caf60ba2eea5aa85eb75 (tag v0.1.4) and @ 81e447ff426d2c174d00056eec8225004a501803 (main, the 0.2 line)
+- Date reviewed: 2026-11-01
+- What was taken (query patterns and request shapes, rewritten in Python with the standard library; no code copied):
+  - From eurlex-mcp-server's cellarClient.ts: the SPARQL patterns for an act's metadata in one language (title, document date, entry-into-force dates, end of validity, in-force flag, transposition deadline); the consolidated versions as the CELEX numbers matching 0YYYYTNNNN with an optional -YYYYMMDD, newest first; the national implementing measures through the implements relation, the NIM CELEX prefix 7 and the country filter; title search with no ORDER BY and an oversampled limit; the Cellar content request by CELEX with Accept and Accept-Language, retrying HTTP 202 and empty bodies.
+  - From normattiva-mcp v0.1.4: the OpenData API base, the advanced search and article detail endpoints with their headers, and the article suffix index (1 for the base article, 2 for bis). From its main branch: the tipoDettaglio "singolavigenza" field, without which the article detail ignores dataVigenza and returns the current text.
+- Read for comparison and not used: cyanheads/eur-lex-mcp-server (Apache-2.0). The Piedmont sources (Arianna, CSI Piemonte's normacat service, the BURP search) come from research on 2026-11-01, with no code behind them.
+- What was deliberately dropped: the MCP server layer; CJEU case law, EuroVoc, the citation graph, LEGISSUM summaries and the raw SPARQL tool of eurlex-mcp-server; normattiva-mcp's article enumeration by probing, its recent-updates search and its 0.2 portal and AKN reading.
+- License notes: both MIT (adaptation permitted with attribution; attribution kept here and in the script's docstring).
+
 ## Superpowers (reference package, tuning record)
 - Package: superpowers@claude-plugins-official 6.4.1 at project scope since 2026-09-19 to 29 (obra/superpowers; 6.3.0 from 2026-09-14, 6.2.0 from 2026-08-05), installed from the official marketplace, never vendored; 6.4.2 (2026-09-25) waits for the marketplace.
 - Date reviewed: 2026-08-05 (full 14-skill analysis in the session record; upstream v6.2.0 notes describe an ongoing "compression campaign" reducing prescriptiveness).

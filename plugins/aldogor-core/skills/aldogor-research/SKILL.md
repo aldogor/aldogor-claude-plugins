@@ -42,6 +42,8 @@ For every citation in a draft; the procedures, verdict tables, sampling of long 
 
 Non-bibliographic factual claims go through the same loop: institutional facts, timelines and access requirements, tool and model capabilities, affiliations and roles of third parties, and the licence of any model, dataset, font or tool proposed for use, read on its licence file or official page before the resource is proposed, never left "to be checked". Each needs a fetched web source or a document the user supplied, or it is marked [unverified]; a fact about the user comes only from the user or the chat.
 
+A citation of a law, a decree, an EU act or a Piedmont regional act is checked on the act's official source at the date the document needs; in Claude Code, aldogor-legislation reads them and gives the link to cite.
+
 ## The project's literature folder
 
 In Claude Code, the sources a project cites live in its literature folder: `bibliography.json`, tracked by git, is the record, a CSL JSON array that Pandoc reads as it is, with where the project uses each work in `custom.cited_in`; each work's PDF and Markdown text stay local, named by its key. `scripts/literature.py` adds, retrieves, checks and lists them, as [references/literature.md](references/literature.md) describes. Claude reads a source through its `<key>.md`, whose header says whether it holds the full text, the abstract, the summary or the metadata.
