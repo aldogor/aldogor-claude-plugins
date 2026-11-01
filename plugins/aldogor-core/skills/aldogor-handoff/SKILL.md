@@ -72,3 +72,5 @@ Three to five lines in one fenced block, ready to paste, written once the steps 
 3. The next task with its reason, taken from the priority the user gave in step 1: "I'm working on [larger goal]. The next step is [task] because [what it enables]." Then the rest of the journal's open list, which the next session works through until each item is closed or waits on something outside it.
 
 If the prompt needs more than five lines, the missing content belongs in the state documents.
+
+The block closes the final reply, after every tool call of the turn: a client may fold away text written before a tool call, and the prompt would not reach the user.
