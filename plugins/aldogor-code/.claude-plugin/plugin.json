@@ -1,6 +1,6 @@
 {
   "name": "aldogor-code",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Aldo's Claude Code-only skills and agents: project setup and tidying, preparing a repository for collaborators, second opinions from GPT and Gemini through their command-line tools and from an agent on Fable, Italian, EU and Piedmont legislation read at its official sources",
   "author": {
     "name": "Aldo Gorga"

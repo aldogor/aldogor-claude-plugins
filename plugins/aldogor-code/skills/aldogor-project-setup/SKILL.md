@@ -56,10 +56,6 @@ Research projects load no development plugins, and there is nothing to switch of
 Development projects get the toolkit at project scope, installed from the project directory and recorded in its `.claude/settings.json` (commit it):
 
 ```
-claude plugin install superpowers@claude-plugins-official --scope project
-```
-
-```
 claude plugin install security-guidance@claude-plugins-official --scope project
 ```
 
@@ -97,7 +93,7 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 - Commit at every consolidated decision or completed step; at the end of a session, say what is not on the remote and ask whether to push. A repository kept local on purpose states that it has no remote and is never pushed.
 - The git practice, one line naming the project's kind, which aldogor-handoff applies at every close:
   - research: all work on `main`, committed as it consolidates;
-  - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote;
+  - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote; a plan of several tasks runs one task at a time, each committed and reported before the next starts;
   - shared (collaborators may edit the repository): the development practice, with every branch reaching `main` through a pull request that the owner merges.
 - Working files carry no date in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
 - For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.

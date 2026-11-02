@@ -15,7 +15,7 @@ Entry template:
 ```
 
 Referenced-not-vendored packages (installed from their own marketplace, nothing copied here)
-do not need an entry: Superpowers, skill-creator.
+do not need an entry: skill-creator.
 
 ## Entries
 
@@ -88,11 +88,10 @@ do not need an entry: Superpowers, skill-creator.
 - What was deliberately dropped: rizzo-pii's web app and API layer; the GLiNER and Presidio detectors compared during the evaluation.
 - License notes: MIT (code and model), CC BY 4.0 (municipalities); nothing from redact-restore (AGPL-3.0) or Medical-Redactor (EUPL-1.2) is copied.
 
-## Superpowers (reference package, tuning record)
-- Package: superpowers@claude-plugins-official (obra/superpowers), installed from the official marketplace at project scope, never vendored: 7.0.0 (bb92a77741419a4ab5f06e711a283343f1ada0c3) or 6.4.1 according to the folder; 7.0.1 (2026-10-21) waits for the marketplace.
+## Superpowers (removed 2026-11-02)
+- Package: superpowers@claude-plugins-official (obra/superpowers), a referenced package installed from the official marketplace at project scope, never vendored; last installed at 7.0.0 (bb92a77741419a4ab5f06e711a283343f1ada0c3).
 - Date reviewed: 2026-11-01, every skill of 7.0.0 and its SessionStart hook, with its use in the transcripts over 90 days (27 skill calls, 16 of them in August) and what its users, its maintainer and Anthropic have said of it; earlier review 2026-08-05 at 6.2.0.
-- Tuning applied on our side only: never enabled at user scope; enabled at project scope in the app repositories, where aldogor-project-setup installs it for development projects, and disabled in the research, teaching and infra repositories, this one included, whose `false` entries are inert. skillOverrides cannot target plugin skills (documented limitation), so no per-skill downgrades exist to break on upstream updates.
-- Re-check at the quarterly backport review: in each app repository the first feature planned decides whether plan mode replaces it; once no project enables it, one uninstall removes every record.
+- Why it left: Claude Code and the aldogor skills cover what the projects used, and development goes on with Claude Code's own plan mode and code review. The two ideas kept are in the entry below.
 
 ## This repository's rules for writing skills (the form of a line; a line answers a failure on record)
 - Distilled from: obra/superpowers @ bb92a77741419a4ab5f06e711a283343f1ada0c3, skills/writing-skills/SKILL.md ("Match the Form to the Failure"; the baseline run before a skill is written)
