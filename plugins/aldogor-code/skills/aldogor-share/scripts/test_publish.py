@@ -103,6 +103,40 @@ class PublishTest(unittest.TestCase):
         self.assertIn("AWS access key in cfg.py", str(ctx.exception))
         self.assertNotIn(FAKE_AWS, str(ctx.exception))
 
+    def test_a_local_value_in_another_shape_stops_the_publication_without_being_printed(self):
+        # The failure on record: a test held the file ID of the link in local.properties, inside a different URL.
+        file_id = "1abcDEF" + "234ghiJKL567mnoPQR890"
+        self.repo({".gitignore": "local.properties\n", "UpdateTest.kt": f"val url = \"https://host.example/file/d/{file_id}/view\"\n", "a.md": "a"}, "target: ../proj\n*.kt\na.md\n")
+        write(self.private / "local.properties", f"# the update link\nUPDATE_URL=https://host.example/uc?export=download&id={file_id}\n")
+        with self.assertRaises(pub.PublishError) as ctx:
+            self.run_publish()
+        self.assertIn("UpdateTest.kt holds the value of UPDATE_URL from local.properties", str(ctx.exception))
+        self.assertNotIn(file_id, str(ctx.exception))
+        self.assertFalse(self.target.exists())
+
+    def test_a_whole_value_from_an_ignored_env_file_stops_the_publication(self):
+        secret = "s3cret" + "-value"
+        self.repo({".gitignore": ".env\n", "conf/app.py": f"PASSWORD = '{secret}'\n"}, "target: ../proj\nconf/**\n")
+        write(self.private / ".env", f"export DB_PASSWORD=\"{secret}\"\n")
+        with self.assertRaises(pub.PublishError) as ctx:
+            self.run_publish(check_only=True)
+        self.assertIn("conf/app.py holds the value of DB_PASSWORD from .env", str(ctx.exception))
+        self.assertNotIn(secret, str(ctx.exception))
+
+    def test_placeholders_ordinary_settings_and_tracked_templates_publish(self):
+        self.repo(
+            {".gitignore": ".env\n", ".env.example": "API_KEY=your_key_here\n", "app.py": "MODE = 'production'\nNAME = 'MyApplication'\nKEY = 'your_key_here'\nBASE = 'http://localhost:3000/api'\nDB = 'postgresql+psycopg://app:app@localhost:5432/app'\n"},
+            "target: ../proj\napp.py\n.env.example\n",
+        )
+        write(self.private / ".env", "NODE_ENV=production\nAPP_NAME=MyApplication\nAPI_KEY=your_key_here\nBASE_URL=http://localhost:3000/api\nDATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app\nPORT=3000\n# OLD=a-commented-value-1234\n")
+        self.assertIsNotNone(self.run_publish()[0])
+
+    def test_a_variable_declared_public_publishes(self):
+        host = "https://api.example.org/" + "v2"
+        self.repo({".gitignore": ".env\n", "README.md": f"The service answers at {host}.\n"}, f"target: ../proj\npublic-value: SERVICE_URL\nREADME.md\n")
+        write(self.private / ".env", f"SERVICE_URL={host}\n")
+        self.assertIsNotNone(self.run_publish()[0])
+
     def test_only_committed_content_is_published(self):
         self.repo({"a.md": "committed"}, "target: ../proj\na.md\n")
         write(self.private / "a.md", "not yet committed")

@@ -15,7 +15,8 @@ comments and blank lines ignored:
     validate: <command>                run after the public tree is written, before the commit (repeatable)
                                        In both, {python} stands for the Python running this script and {target}
                                        for the clone's path, so the commands work on every platform.
-    <path or glob>                     published at the same path; `dir/**` takes a whole folder, and `*` in a
+    public-value: <variable>           a variable of a local values file whose value may appear in public (repeatable)
+    <path or glob>                    published at the same path; `dir/**` takes a whole folder, and `*` in a
                                        glob also matches across folders
     <source> -> <destination>          published under another path: a file to a file, or `dir/**` to a folder
                                        (`-> .` for the root)
@@ -30,7 +31,10 @@ Before anything is written, the publication stops on any of these findings:
   - a rule that matches no committed file (a rule left behind by a rename protects nothing);
   - two sources for one destination;
   - a line matching a known credential format (private keys, AWS, GitHub, Anthropic, OpenAI, Google, Slack and
-    Stripe keys).
+    Stripe keys);
+  - a file holding a value of a local values file: an ignored .env or local.properties on this machine, compared
+    whole and through the long tokens inside it, since a link can come back in another shape around the same ID.
+    Reports name the variable and never print the value.
 Files over 10 MB are reported. The public clone then becomes exactly the published tree: files the list no
 longer names are removed from it. The push stays the user's step.
 
@@ -68,6 +72,12 @@ SECRETS = [
 ENV_FILE = re.compile(r"(^|/)\.env(\.[^/]+)?$")
 ENV_ALLOWED = re.compile(r"\.env\.(example|sample|template|dist)$")
 LITERATURE = re.compile(r"(^|/)literature/(?!bibliography\.(json|csv)$)[^/]+$")
+# Ignored files that hold this machine's values, the lines that assign one, and what is not worth looking for:
+# placeholders, ordinary settings (NODE_ENV=production) and addresses on this machine would stop publications for nothing.
+LOCAL_VALUES = re.compile(r"(^|/)(local\.properties|\.env(\.[^/]+)?)$")
+ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][\w.-]*)\s*=\s*(.*?)\s*$")
+NOT_A_VALUE = re.compile(r"(?i)^(your|change|example|placeholder|xxx|todo|none|null|true|false|localhost|development|production|test)(\b|_)|^<.*>$|^[a-z][a-z0-9+.-]*://([^/@\s]*@)?(localhost|127\.0\.0\.1)\b")
+TOKEN = re.compile(r"[A-Za-z0-9_-]{16,}")
 
 
 class PublishError(Exception):
@@ -82,16 +92,16 @@ def git(repo: pathlib.Path, *args: str, text: bool = True) -> subprocess.Complet
 
 
 def read_manifest(root: pathlib.Path) -> dict:
-    """The manifest as {"target": str, "check": [...], "validate": [...], "rules": [(source, destination or None)]}."""
+    """The manifest as {"target": str, "check": [...], "validate": [...], "public-value": [...], "rules": [(source, destination or None)]}."""
     path = root / MANIFEST
     if not path.is_file():
         raise PublishError(f"no {MANIFEST} at {root}: the include-list names what the public repository receives")
-    out = {"target": None, "check": [], "validate": [], "rules": []}
+    out = {"target": None, "check": [], "validate": [], "public-value": [], "rules": []}
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.split(" #", 1)[0].strip() if not raw.lstrip().startswith("#") else ""
         if not line:
             continue
-        key = re.match(r"^(target|check|validate):\s*(.+)$", line)
+        key = re.match(r"^(target|check|validate|public-value):\s*(.+)$", line)
         if key:
             if key.group(1) == "target":
                 out["target"] = key.group(2).strip()
@@ -179,6 +189,38 @@ def scan(blobs: dict[str, bytes]) -> list[str]:
     return found
 
 
+def value_needles(value: str) -> set[str]:
+    """What would give a local value away: the value itself, unless it reads as an ordinary word, and its long tokens."""
+    value = value.strip("\"'")
+    if NOT_A_VALUE.search(value):
+        return set()
+    needles = {t for t in TOKEN.findall(value) if re.search(r"\d", t) and re.search(r"[A-Za-z]", t)}
+    if len(value) >= 16 or (len(value) >= 8 and not value.isalpha()):
+        needles.add(value)
+    return needles
+
+
+def local_value_findings(root: pathlib.Path, blobs: dict[str, bytes], cleared: list[str]) -> list[str]:
+    """The files to publish that hold a value of an ignored local values file; reports name the variable, never the value."""
+    ignored = git(root, "ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").stdout.split("\0")
+    found = set()
+    for rel in sorted(f for f in ignored if LOCAL_VALUES.search(f) and not ENV_ALLOWED.search(f)):
+        path = root / rel
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = ASSIGNMENT.match(line)
+            if not m or m.group(1) in cleared:
+                continue
+            for needle in value_needles(m.group(2)):
+                data = needle.encode("utf-8")
+                found.update(
+                    f'{dest} holds the value of {m.group(1)} from {rel} (not shown); if it may be public, add "public-value: {m.group(1)}" to {MANIFEST}'
+                    for dest, blob in blobs.items() if data in blob
+                )
+    return sorted(found)
+
+
 def run_commands(commands: list[str], cwd: pathlib.Path, label: str, target: pathlib.Path | None = None) -> None:
     """Run each command through the shell at cwd, with {python} (this interpreter) and {target} filled in; stop at a failure."""
     for cmd in commands:
@@ -225,7 +267,7 @@ def publish(repo: pathlib.Path, check_only: bool = False, message: str | None = 
     if held:
         log("held back, never public: " + ", ".join(held))
     blobs = {d: git(root, "show", f"HEAD:{s}", text=False).stdout for d, s in selected.items()}
-    findings = scan(blobs)
+    findings = scan(blobs) + local_value_findings(root, blobs, manifest["public-value"])
     if findings:
         raise PublishError("\n".join(findings))
     for d, data in sorted(blobs.items()):
