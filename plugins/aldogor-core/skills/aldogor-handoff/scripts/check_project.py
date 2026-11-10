@@ -24,9 +24,14 @@ this script changes with them, in the same commit. It reads the repository and c
   - the repository's folder is never named `<name>-internal`: that suffix names only the private GitHub
     repository of a project with a public version, whose clone is the folder `<name>` and whose public
     clone is the sibling folder `<name>-public`;
-  - every tracked top-level folder belongs to the standard layout (the research tree of aldogor-project-setup,
-    plus the src/, tests/, public/, assets/, app/ and gradle/ that development stacks bring) or has its line
-    in CLAUDE.md saying what it holds: a folder the project needs is described, drift is not;
+  - every tracked top-level folder belongs to the standard layout (docs/, literature/, data/, outputs/,
+    scripts/, tests/ and archive/, plus the src/, public/, assets/, app/ and gradle/ that development stacks
+    bring) or has its line in README.md or CLAUDE.md saying what it holds: a folder the project needs is
+    described, drift is not;
+  - every tracked document in the root (md, csv, docx, pdf, pptx, xlsx) has the same line in README.md or
+    CLAUDE.md, apart from the repository's own files (README.md, CLAUDE.md, CLAUDE.local.md, JOURNAL.md,
+    AGENTS.md, CONTRIBUTING.md, LICENSE or LICENCE under any extension) and the TODO.md and CHANGELOG.md
+    reported above;
   - every plugin that .claude/settings.json (or settings.local.json) enables is installed for this folder: the
     settings file enables plugins but installs nothing, and each machine records its installs per folder in
     ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist).
@@ -36,7 +41,9 @@ Usage:
   python check_project.py [PATH] [--fetch] [--no-github]
 
 PATH defaults to the working directory (any folder inside the repository). --no-github skips the visibility
-lookup through the gh CLI. Every finding is one line; the exit code is 0 whether or not there are findings.
+lookup through the gh CLI. The first line gives the repository's state (branch, practice, remote, journal) and
+the number of words of CLAUDE.md, which is information and never a finding: the file loads into every session
+of the project. Every finding is one line; the exit code is 0 whether or not there are findings.
 Runs with Python 3.10 or later on Windows, macOS and Linux, with git on the PATH.
 """
 
@@ -60,9 +67,18 @@ CLOSING_LINE = re.compile(r"^\s*(?:-\s*)?(Opened|Closed|Aperti|Chiusi)\s*:", re.
 # The date from which each journal entry closes with its Opened and closed line.
 CLOSING_LINE_SINCE = "2026-09-28"
 LITERATURE_DIRS = ("literature", "docs/literature")
-# The top-level folders of the standard layout: the research tree of aldogor-project-setup and the folders that
-# development stacks bring. Any other tracked top-level folder is described in the project's CLAUDE.md.
+# The top-level folders of the standard layout: the vocabulary of a repository (docs, literature, data, outputs,
+# scripts, tests, archive) and the folders that development stacks bring. Any other tracked top-level folder is
+# described in the project's README.md or CLAUDE.md.
 LAYOUT = {"docs", "literature", "archive", "data", "scripts", "outputs", "src", "tests", "public", "assets", "app", "gradle"}
+# The files where a project says what a folder or a root document outside the standard layout holds.
+DECLARED_IN = ("README.md", "CLAUDE.md")
+# Root files with these extensions are documents someone reads, so each is described like a folder; code and
+# configuration in the root belong to the stack and are left alone.
+DOCUMENT_EXT = {".md", ".csv", ".docx", ".pdf", ".pptx", ".xlsx"}
+# The repository's own root documents (lowercase, since some projects write Readme.md or license.md). TODO.md
+# and CHANGELOG.md are here because check() reports them with their own finding.
+OWN_DOCUMENTS = {"readme.md", "claude.md", "claude.local.md", "journal.md", "agents.md", "contributing.md", "todo.md", "changelog.md"}
 
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
@@ -97,7 +113,9 @@ def github_visibility(repo: pathlib.Path) -> str:
 
 def tracked(repo: pathlib.Path, *paths: str) -> list[str]:
     """The files git tracks under the given paths."""
-    return [l for l in git(repo, "ls-files", *paths).stdout.splitlines() if l.strip()]
+    # core.quotepath=off: a name with accented letters arrives as written, where git's default is a quoted,
+    # escaped string that no check on names or extensions would recognize.
+    return [l for l in git(repo, "-c", "core.quotepath=off", "ls-files", *paths).stdout.splitlines() if l.strip()]
 
 
 def ignored(repo: pathlib.Path, path: str) -> bool:
@@ -183,12 +201,18 @@ def publication_findings(repo: pathlib.Path) -> list[str]:
 
 
 def layout_findings(repo: pathlib.Path) -> list[str]:
-    """Tracked top-level folders outside the standard layout that CLAUDE.md does not describe (named as `folder/`)."""
-    claude_md = repo / "CLAUDE.md"
-    text = claude_md.read_text(encoding="utf-8", errors="replace") if claude_md.is_file() else ""
-    tops = sorted({p.split("/")[0] for p in tracked(repo) if "/" in p and not p.startswith(".")})
-    extra = [t for t in tops if t not in LAYOUT and not re.search(rf"(?<![\w.-]){re.escape(t)}/", text)]
-    return [f"top-level folder {t}/ is outside the standard layout and CLAUDE.md does not say what it holds" for t in extra]
+    """Tracked top-level folders and root documents outside the standard layout that neither README.md nor
+    CLAUDE.md names: a folder as `folder/`, a document by its file name."""
+    text = "\n".join((repo / n).read_text(encoding="utf-8", errors="replace") for n in DECLARED_IN if (repo / n).is_file())
+    files = [p for p in tracked(repo) if not p.startswith(".")]
+    tops = sorted({p.split("/")[0] for p in files if "/" in p} - LAYOUT)
+    docs = sorted(p for p in files if "/" not in p and pathlib.PurePosixPath(p).suffix.lower() in DOCUMENT_EXT
+                  and p.lower() not in OWN_DOCUMENTS and not p.lower().startswith(("license", "licence")))
+    # The name stands on its own in the text: the slash closes a folder's name, and a document's name is not the
+    # start of a longer one (notes.md inside notes.md.bak), while the full stop that ends a sentence may follow it.
+    undescribed = [("top-level folder", f"{t}/") for t in tops if not re.search(rf"(?<![\w.-]){re.escape(t)}/", text)]
+    undescribed += [("root document", d) for d in docs if not re.search(rf"(?<![\w.-]){re.escape(d)}(?![\w-])", text)]
+    return [f"{kind} {name} is outside the standard layout and neither README.md nor CLAUDE.md says what it holds" for kind, name in undescribed]
 
 
 def claude_dir() -> pathlib.Path:
@@ -225,7 +249,8 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
     """The project's state and the conventions it breaks, as a dict whose "findings" lists one line each.
 
     visibility: public, private, local-only or remote-unknown; None asks GitHub. mirror: a generated copy of
-    another repository (the public plugins), checked for git state and .env only."""
+    another repository (the public plugins), checked for git state and .env only. "claude_words" is the number
+    of words of CLAUDE.md as a string like the other fields, "-" without the file: information, never a finding."""
     top = git(repo, "rev-parse", "--show-toplevel")
     if top.returncode != 0:
         raise SystemExit(f"{repo} is not inside a git repository")
@@ -251,6 +276,8 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
     journal_text = journal_path.read_text(encoding="utf-8", errors="replace") if journal_path.is_file() else None
     named = "mirror" if mirror else practice(repo)
     journal = journal_form(journal_text)
+    claude_md = repo / "CLAUDE.md"
+    words = str(len(claude_md.read_text(encoding="utf-8", errors="replace").split())) if claude_md.is_file() else "-"
 
     f = []
     if not mirror:
@@ -297,7 +324,7 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
     return {
         "repo": repo.name, "branch": branch, "practice": named, "remote": remote, "visibility": visibility,
         "journal": journal, "archive": ("tracked" if archive_tracked else "untracked") if present else "-",
-        "findings": f,
+        "claude_words": words, "findings": f,
     }
 
 
@@ -310,7 +337,7 @@ def main(argv: list[str] | None = None) -> int:
     # A Windows console on cp1252 cannot print every character: replace what it lacks, never crash.
     sys.stdout.reconfigure(errors="replace")
     row = check(pathlib.Path(args.path), visibility="remote-unknown" if args.no_github else None, fetch=args.fetch)
-    print(f"{row['repo']}: branch {row['branch']}, practice {row['practice']}, remote {row['remote']}, journal {row['journal']}")
+    print(f"{row['repo']}: branch {row['branch']}, practice {row['practice']}, remote {row['remote']}, journal {row['journal']}, CLAUDE.md words {row['claude_words']}")
     for line in row["findings"]:
         print(f"- {line}")
     if not row["findings"]:

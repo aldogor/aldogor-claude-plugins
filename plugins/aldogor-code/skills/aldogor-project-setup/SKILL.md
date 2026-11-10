@@ -12,7 +12,7 @@ Every new project starts the same way; this skill carries the checklist so no se
 
 - `.gitignore` including at least: `.env`, `__pycache__/`, `.DS_Store`, `*.log`
 - in a project whose code reads secrets or keys, `.env` holds them and is never committed, and `.env.example`, committed, lists the same names with placeholders; a project that reads none has neither
-- `README.md`: first paragraph must be able to stand alone as the repo description
+- `README.md`: first paragraph must be able to stand alone as the repo description; then one line per top-level entry, saying what it holds
 - `git init`, first commit after the skeleton exists; rename the branch to `main` before any push
 
 ## Research-project structure
@@ -45,7 +45,9 @@ Literature: one flat folder, `literature/` (`docs/literature/` in a development 
 
 Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. A document whose home is Google Drive gets its dated copy in `archive/` at each milestone (a version sent, submitted or approved): a Google Doc exported as Markdown once no suggestion is pending, a Word or Excel file as the file itself, as aldogor-drive describes. Superseded documents and the imported claude.ai history also live in `archive/`.
 
-Development projects take their stack's layout: `src/`, `tests/`, `scripts/`, `docs/`, and the folders the stack itself brings (`public/` and `assets/` on the web, `app/` and `gradle/` on Android). In any project, a top-level folder outside these trees gets its line in CLAUDE.md saying what it holds: a folder the project needs is described there, and one nobody can describe is drift. The conventions check of aldogor-handoff reports the folders CLAUDE.md does not describe.
+Development projects take their stack's layout (`src/`, `tests/`, `scripts/`, `docs/`, and the folders the stack itself brings: `public/` and `assets/` on the web, `app/` and `gradle/` on Android), with the research tree, where there is one, under `docs/`.
+
+The names mean the same in every repository, and no repository needs them all. Units of work made of documents (an event, an application, a deliverable) are subfolders of `docs/`; when each unit carries its own code and outputs, they share one plural container in the root (`works/`, `services/`). Code sits at the level of what it serves: `scripts/` with `tests/` for the whole project, inside the unit for a unit, beside the document's assets for one document. A document is born in `docs/`; the root holds the files about the repository and those a tool reads there. Any other top-level folder or document gets one line, in README or CLAUDE.md, saying what it holds: what the project needs is described there, and what nobody can describe is drift. The conventions check of aldogor-handoff reports the folders and root documents that neither file describes.
 
 ## Development or research?
 
@@ -99,7 +101,7 @@ State these in the project's CLAUDE.md so later sessions and tidy passes find th
 
 ## Project CLAUDE.md
 
-Offer a starter CLAUDE.md: what the project is (2-3 sentences), where authority lives (which doc owns what, with one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, the conventions above, and a "Key files" ("File chiave") list with one line per file saying what it holds and when to update it. The journal appears once, in the authority table or in the key files, never in both. Its line reads, in the project's language (adapt the canonical document's name):
+Offer a starter CLAUDE.md with an opening paragraph (what the project is, in two or three sentences) and three sections: where authority lives (which document owns what, one line per file saying what it holds and when to update it, and one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, and the conventions above. A development project adds its own sections after these (data invariants, code patterns). The file carries no project state, which is the journal's open list, and no inventory of the tree, which is the README's; the user's global rules are restated only in a repository that collaborators work in, since they do not load them. The journal's line reads, in the project's language (adapt the canonical document's name):
 
 ```markdown
 - `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its closing "Open" list is the project's state.
