@@ -73,8 +73,6 @@ One section per session that verified or decided something, headed by the ISO da
 
 The journal ends with a single open list, `## Open` (`## Aperto` in Italian projects), kept after the last dated entry and edited in place: every open node and pending task, one line each, with its state (open, in progress, or waits on what unblocks it) and, where useful, a pointer to the section of the canonical document where it closes. The next session's priority comes first. A new entry goes above the list, and ends with one line naming what it opened and what it closed (`Opened: ...; closed: ...`), so the history of the list lives in the entries and the list itself holds only the present. A node closes only when the decision is written in the canonical document and reflected in the linked files (CLAUDE.md, README); it leaves the list in the same edit that records its closing. A fresh session reads the open list.
 
-A journal that still ends each entry with its own `### Open as of <date>` (`### Aperto al <data>`) converts once, in a commit of its own: the latest of those lists becomes `## Open` at the end, and the older ones are removed, since git keeps them.
-
 The journal is written in the project's language, taken from its README or CLAUDE.md, and the labels that other skills look for are fixed per language: `## Open` / `## Aperto`, `open, in progress, waits on` / `aperto, in corso, in attesa di`, `Opened:` / `Aperti:`, `closed:` / `chiusi:`. Header (English shown; the Italian rendering follows the same wording):
 
 ```markdown
@@ -90,11 +88,12 @@ Italian: `# Journal` with "Registro cronologico delle verifiche, delle decisioni
 State these in the project's CLAUDE.md so later sessions and tidy passes find them there:
 
 - Git is the changelog: no CHANGELOG.md, no "modifiche" or "changelog" sections in documents; the reasoning behind a change goes in JOURNAL.md, the change itself in the commit message.
-- Commit at every consolidated decision or completed step; at the end of a session, say what is not on the remote and ask whether to push. A repository kept local on purpose states that it has no remote and is never pushed.
+- Commit at every consolidated decision or completed step. A private repository of research practice with a remote says that the push follows the commit; every other says that at the end of a session Claude says what is not on the remote and asks whether to push. A repository kept local on purpose states that it has no remote and is never pushed.
 - The git practice, one line naming the project's kind, which aldogor-handoff applies at every close:
   - research: all work on `main`, committed as it consolidates;
   - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote; a plan of several tasks runs one task at a time, each committed and reported before the next starts;
   - shared (collaborators may edit the repository): the development practice, with every branch reaching `main` through a pull request that the owner merges.
+- In a project with a user interface, a change to a screen starts from a list of what the screen does today and ends with the user's walk through the running application against that list; the accessibility checks (axe and pa11y, at 320 px too) run in CI.
 - Working files carry no date in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
 - For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.
 

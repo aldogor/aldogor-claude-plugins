@@ -59,13 +59,15 @@ When Fable joins, launch the aldogor-second-opinion-fable agent at the same time
 
 A reviewer that fails or times out is reported with its log, and the others go ahead.
 
+**A reviewer on a web app.** When the user names a model that only its web app offers, `python scripts/second_opinion.py export <run>` writes the approved packet as one file, `out/packet-to-paste.md`, for the user to paste there, and `python scripts/second_opinion.py import <run> <reviewer> <file>` saves the reply the user brings back as `out/<reviewer>.md`, refusing one too short to be a review. The approval of step 3 covers the export as it covers a run.
+
 ## What the user sees
 
 **Review.** One table of the points raised: the point, where in the material, who raised it (Claude, GPT, Gemini, Fable), and Claude's assessment of it (agree, or disagree with the reason). Points on which the reviewers contradict each other or Claude come first. A reviewer's claim of fact (a citation, a figure, a regulation) that the material does not confirm is marked as a fact to check. A packet file changed during the run is reported here.
 
 **Alternative draft.** The drafts one after another, Claude's included, each headed by its reviewer and its idea in one line, then one line on what sets each apart.
 
-On the packet path the answers stay in `out/` for the user to open. The user then chooses: which points to take, which draft, or a combination they describe. Only then does Claude change the project's files.
+On the packet path the answers stay in `out/` for the user to open. The user then chooses: which points to take, which draft, or a combination they describe. When the user asks for one merged version, Claude writes it and lists what it took from each reviewer and what it left out. Only then does Claude change the project's files.
 
 ## Quota
 

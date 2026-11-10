@@ -2,6 +2,31 @@
 
 Messaggi a colleghi, gruppi di lavoro, comunità (es. il gruppo EuroNet). Italiano o inglese secondo il gruppo.
 
+## Coppie prima e dopo
+
+(dalle correzioni dell'utente, anonimizzate: nomi, enti e date sono sostituiti. Da imitare la mossa, non le parole.)
+
+- Prima: «La polizza attuale copre anche questo ruolo, o servirebbe il pacchetto aggiuntivo (o altro)? Se serve un'integrazione, mi fai sapere anche quanto costerebbe?»
+  Dopo: «Immagino che convenga in qualche modo integrare la polizza attuale, ma dimmi tu cosa ne pensi.»
+  La soluzione si lascia a chi la fa di mestiere. (2026-11-10)
+- Prima: «A novembre mi specializzo e cambia il mio inquadramento: [nuova posizione].»
+  Dopo: «A novembre mi specializzo e cambia quindi il mio inquadramento lavorativo.»
+  In un messaggio un connettivo, non i due punti. (2026-11-10)
+- Prima: «Ciao [nome]! Gli avvisi adesso arrivano solo a me, gli altri ti arrivano come prima. Ho anche visto la tua modifica: la base era buona, ho corretto alcune cose e l'ho unita. In particolare [tre dettagli tecnici e la procedura passo per passo].»
+  Dopo: «Allora, ora gli avvisi degli update arrivano solo a me, per quanto riguarda il bot ho fatto un po' di aggiustamenti ed è online. Chiaramente ancora non funziona niente, ma è online nello stato attuale. Per continuare chiedi all'assistente, dovrebbe saperti guidare, che ho lasciato istruzioni nel repo.»
+  Dove siamo, detto a voce, senza giudicare il lavoro dell'altro e senza la procedura. (2026-11-10)
+- Prima: «In più ve la sconsiglio vivamente: la discussione dura 5 minuti»
+  Dopo: «ve l'ho già detto a molti di voi, ve la sconsiglio, però insomma, chi vuole venire, chi sono io per fermarvi? E ovviamente mi fa piacere.»
+  Agli amici resta il parlato del dettato. (2026-11-10)
+- Prima: «Mi occupo soprattutto di implementation science, quindi di come le norme si traducono in pratica nei servizi»
+  Dopo: «mi occupo del tema da tempo, mi interessano molto anche gli aspetti normativi, soprattutto la parte di implementazione»
+  Al primo contatto con un professionista il proprio campo non si spiega. (2026-11-10)
+- Prima: «[…] its notice says the annual update was missed (the reminders went to three of our addresses). If we want to stay on it we'd need to register again; until then the number comes off our Privacy Policy.»
+  Dopo: «PS. […] its notice says the annual update was missed. If we want to stay on it we'd need to register again. Probably.»
+  Dettagli e conseguenze fuori; un PS e un'attenuazione di una parola. (2026-11-10)
+
+## Voci del registro
+
 - Corto e diretto: un messaggio dice una cosa. Se le cose sono tre, valuta tre messaggi o un elenco minimo.
 - Colloquiale ma pulito: si può aprire senza saluto in una conversazione già avviata; niente chiusure formali, niente firma.
 - Niente struttura da documento: zero titoli, zero grassetti a tappeto, zero elenchi numerati salvo necessità reale.
@@ -9,7 +34,8 @@ Messaggi a colleghi, gruppi di lavoro, comunità (es. il gruppo EuroNet). Italia
 - Emoji: nessuna nei messaggi scritti a nome dell'utente, che non le usa.
 - Nei messaggi e nei documenti di lavoro informali la parola è quella parlata, spesso un understatement: "tipo capoeira" e non "dalla capoeira", "abbastanza carina" e non "super stylish", "da chiedere a loro" e non "da chiedere al servizio". (2026-10-10)
 - Il gergo interno sta solo nei messaggi al gruppo che lo capisce.
-- I fatti che riguardano chi scrive (cosa ha fatto, sentito, promesso, quando) vengono dalla chat o dal materiale fornito, mai inferiti; ciò che manca resta [n/d] e si chiede.
+- I fatti che riguardano chi scrive (cosa ha fatto, sentito, promesso, quando) vengono dalla chat o dal materiale fornito, mai inferiti; ciò che manca si chiede o resta fuori, e nel messaggio non compare alcun segnaposto.
+- Quando la soluzione è il mestiere o il ruolo di chi riceve, il messaggio segnala il problema e chiede il suo parere, senza elencare opzioni. (2026-11-10)
 
 ## Esempi dell'utente
 

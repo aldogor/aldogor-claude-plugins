@@ -1,7 +1,7 @@
 ---
 name: aldogor-handoff
 description: >-
-  Guides the user through the close of a working session and leaves the project in order: closes the threads the session left open and asks what the next session should put first, brings the state document and the project's JOURNAL.md up to date, reviews the documents a later session reads first so that they agree with the work as it is, settles git (leftovers, commit, branch or worktree, sync with the remote, the push question), and ends with a minimal continuation prompt. Use when the user says "aldogor-handoff", "handoff", "prompt per la prossima chat", "prepara il passaggio", "chiudi la sessione", "gimme next prompt", or is ending a long session that continues elsewhere.
+  Guides the user through the close of a working session and leaves the project in order: closes the threads the session left open and asks what the next session should put first, brings the state document and the project's JOURNAL.md up to date, reviews the documents a later session reads first so that they agree with the work as it is, settles git (leftovers, commit, branch or worktree, sync with the remote, the push), and ends with a minimal continuation prompt. Use when the user says "aldogor-handoff", "handoff", "prompt per la prossima chat", "prepara il passaggio", "chiudi la sessione", "gimme next prompt", or is ending a long session that continues elsewhere.
 ---
 
 # Aldogor-handoff
@@ -28,9 +28,9 @@ What goes in: decisions taken, current status, open items with what unblocks the
 
 If `JOURNAL.md` exists in the project root, it gets one section headed by today's ISO date (`## 2026-08-18`, or a range if the work spanned days), placed above the open list that ends the file, with what the session verified and decided: the data (counts, yields, measurements) and the sources (DOI, URL) behind each decision, and the alternatives discarded and why. Consolidated decisions go in the canonical document; the journal keeps the evidence that motivates them. The section's last line names what the session opened and what it closed (`Opened: ...; closed: ...`, in Italian `Aperti: ...; chiusi: ...`).
 
-The open list, `## Open` (`## Aperto` in Italian projects), is the journal's last section and is edited in place: every open node and pending task, one line each with its state (open, in progress, or waits on what unblocks it; aperto, in corso, in attesa di), with what closed removed, the threads of step 1 that stayed open added, and the user's priority first. A node closes only when the decision is written in the canonical document and reflected in CLAUDE.md and README. A journal that still ends each entry with its own `### Open as of <date>` (`### Aperto al <data>`) converts first, in a commit of its own: the latest of those lists becomes the open list at the end, and the older ones are removed, since git keeps them.
+The open list, `## Open` (`## Aperto` in Italian projects), is the journal's last section and is edited in place: every open node and pending task, one line each with its state (open, in progress, or waits on what unblocks it; aperto, in corso, in attesa di), with what closed removed, the threads of step 1 that stayed open added, and the user's priority first. A node closes only when the decision is written in the canonical document and reflected in CLAUDE.md and README.
 
-If the session verified or decided nothing and no item changed state, there is no journal entry: say so. A project that still carries a TODO.md folds its items into the journal's open list, deletes the file and removes its mentions from CLAUDE.md and README.
+If the session verified or decided nothing and no item changed state, there is no journal entry: say so.
 
 ## 4. The documents agree with the work
 
@@ -61,7 +61,7 @@ Other rules the repository sets (no remote, who merges) hold too. Where no pract
 2. **Commit** the session's finished work, the updated documents included: message in the repository's language and style, nothing secret and no `.env` staged.
 3. **Branch or worktree.** If the session worked outside the main branch, the work lands as the practice says: merged once its tests pass, or through a pull request; work not ready stays on its branch, and the open list says so. After a merge, delete the branch with `git branch -d` (it refuses an unmerged one) and the worktree, and offer to delete the remote branch. In a worktree that the desktop app manages, its own sync with the base branch comes before any manual merge.
 4. **Sync.** Fetch. If the remote has commits the local branch lacks, integrate them before pushing (a rebase in a repository only the user commits to, a merge or a pull request where the repository's rules say so) and report any conflict to the user instead of resolving it by guesswork.
-5. **Push.** Say what is not yet on the remote and ask whether to push; the push waits for the answer. This is the one point where the push is always proposed.
+5. **Push.** In a private repository of research practice, push what is not yet on the remote and say so. In every other repository (shared or development practice, a pull request as the way in, a public repository), say what is not yet on the remote and ask whether to push; the push waits for the answer.
 
 ## 6. The continuation prompt
 

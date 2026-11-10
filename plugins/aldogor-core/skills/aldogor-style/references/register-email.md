@@ -4,6 +4,38 @@ Email a supervisori, collaboratori, istituzioni, fornitori. Italiano o inglese s
 
 Di solito il registro è propositivo più che impositivo, quanto lo consentono la mail e il tono della conversazione: costruzioni che propongono ("si potrebbe valutare", "ci farebbe piacere", "le versioni piccole, che ho immaginato come volantini") invece di ordinare o di dare per decisa una scelta ancora aperta; la fermezza sta nei fatti elencati, non nel tono.
 
+## Coppie prima e dopo
+
+(dalle correzioni dell'utente, anonimizzate: nomi, enti e date sono sostituiti. Da imitare la mossa, non le parole.)
+
+- Prima: «Lo scorso aprile, per una docenza in un altro corso, lo stesso ufficio mi aveva indicato la sola segnalazione. Vi chiederei quindi di confermare se per questo incarico l'autorizzazione serva comunque.»
+  Dopo: (tolto).
+  Il precedente che giustifica la domanda di solito resta fuori. (2026-11-10)
+- Prima: «ti mando in allegato quanto richiesto: il prospetto compilato; la dichiarazione; il contratto»
+  Dopo: «ti mando in allegato tutti i documenti richiesti. Riporto qui anche i dati inseriti nel prospetto»
+  Gli allegati non si elencano; nella mail si ripetono i dati nella forma in cui il destinatario li chiede. (2026-11-10)
+- Prima: «Il testo è scritto nella forma in cui verrà registrato, e vi chiederei di leggerlo così. Alcune frasi descrivono quindi passaggi che devono ancora avvenire […]»
+  Dopo: «Due colleghi avevano proposto di farci aiutare dai bibliotecari per una revisione, e l'idea sarebbe di avere un protocollo definitivo e registrabile nelle prossime settimane.»
+  A chi è dentro il lavoro si dice lo stato in una frase, non come leggere il documento. (2026-11-10)
+- Prima: «Le ricordo però che l'apertura delle segnalazioni rientra tra i suoi compiti, e che un problema presente da tempo andava segnalato quando si è presentato.»
+  Dopo: «Per il futuro le chiederei di aprire la segnalazione appena un problema di questo tipo si presenta, così l'intervento può partire prima.»
+  Un richiamo diventa una richiesta per il futuro, con il suo motivo. (2026-11-10)
+- Prima: «L'ente, che è esterno e non conosce ancora il progetto, potrebbe diventare un canale dopo una presentazione e un accordo su ruoli e flussi dei dati.»
+  Dopo: «[…] e l'ente per gli assistiti seguiti dai servizi sociali (previa condivisione del progetto e accordo su ruoli e flussi dei dati).»
+  La condizione va in una parentesi, non in una frase prudente. (2026-11-10)
+- Prima: «nel file inviato in precedenza gli spessori delle lettere non erano corretti»
+  Dopo: «Abbiamo risolto alcune incompatibilità tra il software con cui è stato disegnato il logo e il formato del file, che probabilmente erano all'origine delle differenze che avevate notato.»
+  Con un fornitore un problema risolto si descrive per la sua causa tecnica, non come errore proprio. (2026-11-10)
+- Prima: «La delibera dice di allegare l'elenco degli impianti, aggiornato a settembre, ma nel testo che abbiamo ricevuto non c'è. Chiederei se è stato trasmesso a parte.»
+  Dopo: «La delibera cita un allegato con l'elenco degli impianti. Ci hai mandato solo questo PDF, magari il resto ti è arrivato a parte? In alternativa lo chiedo direttamente all'ufficio tecnico.»
+  Con un collega la domanda è diretta e parlata, costruita sulla brutta copia dell'utente. (2026-11-10)
+- Prima: «Preciso che nel corso non ho il ruolo di responsabile scientifico: sono componente del comitato scientifico e docente.»
+  Dopo: «Preciso che nel corso non ho il ruolo di responsabile scientifico, ma sono componente del comitato scientifico e docente.»
+  Due frasi si legano di solito con una congiunzione, non con i due punti. (2026-11-10)
+- Prima: «allego le slide che ho preparato con le attività svolte dal gruppo»
+  Dopo: «allego delle semplicissime slide che ho preparato con le attività svolte dal gruppo»
+  Il proprio lavoro si presenta in tono minore. (2026-11-10)
+
 ## Istituzionale e accademica
 
 - Apertura: "Gentilissimi/e," / "Gentile Prof. X," (con eventuale "cari tutti" per gruppi misti); "Buongiorno," per interni meno formali.
@@ -13,9 +45,9 @@ Di solito il registro è propositivo più che impositivo, quanto lo consentono l
 - Le riserve e i limiti vanno in coda con etichetta piana ("Disclaimer: ...", "Ultima nota: ..."), non spalmati nel testo come attenuazioni.
 - Chiusura: "Resto a disposizione per ogni chiarimento." + "Un caro saluto." (accademia) o "Cordiali saluti." (istituzioni). Ringraziamenti concisi, niente pomposità, niente firma-branding.
 - Pronomi di cortesia minuscoli (lei, sua), come li scrive chiunque.
-- Mai ammettere per iscritto ritardi o mancati follow-up propri; mai additare chi non ha risposto.
+- Mai ammettere per iscritto ritardi, errori o mancati follow-up propri; mai additare chi non ha risposto.
 - Prosa nei paragrafi, elenco puntato solo per la sostanza davvero elencabile; niente titoletti ai punti.
-- I fatti che riguardano chi firma (telefonate avvenute, date, affiliazioni, incarichi, impegni presi, cose già inviate) vengono dalla chat o dal materiale fornito, mai inferiti o inventati per rendere la mail più fluida. Ciò che manca resta [n/d] e si chiede prima di consegnare.
+- I fatti che riguardano chi firma (telefonate avvenute, date, affiliazioni, incarichi, impegni presi, cose già inviate) vengono dalla chat o dal materiale fornito, mai inferiti o inventati per rendere la mail più fluida. Ciò che manca si chiede prima di consegnare o resta fuori dal testo: in una mail non compare alcun segnaposto.
 
 ## Collaboratori, in uno scambio già avviato
 
@@ -75,3 +107,5 @@ Risposta a un collega, in uno scambio già avviato:
 
 - Frase lunga coordinata che porta due-tre proposizioni, poi una frase breve di chiusura. La richiesta finale è spesso una domanda morbida: "Mi farebbe piacere sentire cosa ne pensa quando ha un momento."
 - Formule burocratiche di data usate con naturalezza dove il contesto è istituzionale ("in data 14/07/2026", "il giorno 23 giugno p.v. alle ore 14.30").
+- Ciò che il destinatario sa già o non gli serve resta fuori: il precedente che motiva la domanda, chi era presente a una riunione, il nome per esteso di una struttura che conosce, la data di una mail passata. (2026-11-10)
+- Niente frasi sulla mail stessa (perché si scrive, come rispondere): si chiede e basta. (2026-11-10)

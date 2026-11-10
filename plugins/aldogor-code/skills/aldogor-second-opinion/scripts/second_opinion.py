@@ -34,6 +34,12 @@ Usage:
   python second_opinion.py check [--reviewers gpt,gemini]
   python second_opinion.py run RUN [--reviewers gpt,gemini] [--model NAME=MODEL] [--effort NAME=LEVEL]
                                [--timeout SECONDS] [--dry-run]
+  python second_opinion.py export RUN
+  python second_opinion.py import RUN REVIEWER FILE
+
+`export` and `import` serve a model reached only through its web app: `export` writes the message `run` would
+send as out/packet-to-paste.md, for the user to paste, and `import` saves the reply the user brought back (FILE)
+as out/REVIEWER.md, refusing a reply too short to be a review or a draft.
 
 `new` prints the run folder it created. `run` writes out/run.json (per reviewer: status, exit code, seconds,
 answer file; the packet files left out of the message, and those that changed) and prints a summary; it exits 1 when no reviewer produced an
@@ -68,6 +74,7 @@ MESSAGE_HEADER = (
 )
 DEFAULT_TIMEOUT = 1200  # seconds per reviewer; a long deck at high effort can take several minutes
 STATUS_TIMEOUT = 60  # seconds for a sign-in check
+MIN_ANSWER_CHARS = 200  # a pasted reply shorter than this is a fragment of the copy, not a review or a draft
 
 
 @dataclasses.dataclass(frozen=True)
@@ -406,6 +413,46 @@ def dry_run(run: pathlib.Path, names: list[str], models: dict[str, str], efforts
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# export and import: a reviewer reached through its web app
+
+
+def export_packet(run: pathlib.Path) -> tuple[pathlib.Path, list[str]]:
+    """Writes the message `run` would send as out/packet-to-paste.md and returns that file with the packet files
+    left out of it.
+
+    The user pastes the file into the web app of a model that no command-line tool offers. It is the same message
+    the other reviewers receive, so every answer rests on the same material.
+    """
+    packet = run / "packet"
+    if not (packet / "prompt.md").is_file():
+        raise SystemExit(f"no packet/prompt.md in {run}: build the packet first")
+    (run / "out").mkdir(exist_ok=True)
+    message, skipped = compose_message(packet)
+    target = run / "out" / "packet-to-paste.md"
+    target.write_text(message, encoding="utf-8")
+    return target, skipped
+
+
+def import_answer(run: pathlib.Path, name: str, source: pathlib.Path) -> pathlib.Path:
+    """Saves the reply the user brought back from a web app (a UTF-8 text file) as out/<name>.md and returns it.
+
+    The reviewer's name is reduced to lowercase letters, digits and hyphens, like a run's slug. A reply shorter
+    than MIN_ANSWER_CHARS is refused and nothing is written: a copy that caught one word of the answer must not
+    pass for the answer.
+    """
+    clean = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not clean:
+        raise SystemExit(f"the reviewer's name needs a letter or a digit: {name}")
+    text = source.read_text(encoding="utf-8").strip()
+    if len(text) < MIN_ANSWER_CHARS:
+        raise SystemExit(f"the reply in {source} has {len(text)} characters, too few for a review or a draft: nothing saved")
+    (run / "out").mkdir(exist_ok=True)
+    target = run / "out" / f"{clean}.md"
+    target.write_text(text + "\n", encoding="utf-8")
+    return target
+
+
+# ---------------------------------------------------------------------------------------------------------------
 # command line
 
 
@@ -443,6 +490,12 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--effort", action="append", help="NAME=LEVEL, e.g. gpt=xhigh")
     p_run.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     p_run.add_argument("--dry-run", action="store_true")
+    p_export = sub.add_parser("export", help="write the packet as one file to paste into a web app")
+    p_export.add_argument("run")
+    p_import = sub.add_parser("import", help="save a reply pasted back from a web app")
+    p_import.add_argument("run")
+    p_import.add_argument("reviewer")
+    p_import.add_argument("file")
     args = ap.parse_args(argv)
     # A Windows console on cp1252 cannot print every character: replace what it lacks, never crash.
     sys.stdout.reconfigure(errors="replace")
@@ -456,6 +509,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{r['reviewer']}: {r['status']}" + (f" ({r['detail']})" if r["detail"] else ""))
         return 0 if all(r["status"] == "ready" for r in results) else 1
     run = pathlib.Path(args.run)
+    if args.command == "export":
+        target, skipped = export_packet(run)
+        print(f"{target} ({target.stat().st_size} bytes)")
+        if skipped:
+            print("not included (not UTF-8 text): " + ", ".join(skipped))
+        return 0
+    if args.command == "import":
+        print(import_answer(run, args.reviewer, pathlib.Path(args.file)))
+        return 0
     names = names_arg(args.reviewers, REVIEWERS)
     models, efforts = pairs(args.model, REVIEWERS), pairs(args.effort, REVIEWERS)
     if args.dry_run:

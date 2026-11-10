@@ -195,6 +195,35 @@ class SecondOpinionTest(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 bad()
 
+    def test_export_writes_the_same_message_a_run_sends(self):
+        (self.run_dir / "packet" / "files" / "scan.pdf").write_bytes(b"\xff\xfe\x00binary")
+        target, skipped = so.export_packet(self.run_dir)
+        self.assertEqual(target, self.run_dir / "out" / "packet-to-paste.md")
+        # the file is the message of compose_message, so a web app reads what the command-line reviewers read
+        self.assertEqual(target.read_text(encoding="utf-8"), so.compose_message(self.run_dir / "packet")[0])
+        self.assertIn("Gentili colleghi,", target.read_text(encoding="utf-8"))
+        self.assertEqual(skipped, ["files/scan.pdf"])
+        self.assertEqual(so.main(["export", str(self.run_dir)]), 0)
+
+    def test_export_needs_a_packet(self):
+        (self.run_dir / "packet" / "prompt.md").unlink()
+        with self.assertRaises(SystemExit):
+            so.export_packet(self.run_dir)
+
+    def test_import_saves_a_reply_and_refuses_a_fragment(self):
+        reply = self.tmp / "pasted.txt"
+        reply.write_text("  " + "Una stesura alternativa della lettera. " * 10 + "\n\n", encoding="utf-8")
+        target = so.import_answer(self.run_dir, "Gemini web", reply)
+        self.assertEqual(target, self.run_dir / "out" / "gemini-web.md")
+        self.assertTrue(target.read_text(encoding="utf-8").startswith("Una stesura alternativa"))
+        # the failure this guards against: a copy that caught one word of the answer
+        reply.write_text("Certamente!", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            so.import_answer(self.run_dir, "argon", reply)
+        self.assertFalse((self.run_dir / "out" / "argon.md").exists())
+        with self.assertRaises(SystemExit):
+            so.import_answer(self.run_dir, "???", reply)
+
 
 if __name__ == "__main__":
     unittest.main()
