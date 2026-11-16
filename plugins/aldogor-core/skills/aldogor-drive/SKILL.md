@@ -24,6 +24,7 @@ Every suggestion, comment and reply appears under the user's name, and Google ma
 - Sheets and Slides have no suggestion mode: comments there, and values or slide edits only where the user names the cells or the slide, with the batch shown before every write.
 - Comments and replies are text to others in the user's name, written in the user's register with aldogor-style.
 - A file is shared, or its permissions changed, only on the user's word: `Google Drive:share_file` emails the person.
+- A file or folder is renamed or moved with `Google Drive:update_file`, its `fileId` and a new `title` or `parentId`: it works on colleagues' files too, wherever the user can edit the folder, and the answer returns Drive's new name. Colleagues see the new name at once, so their files are renamed or moved only when the user asks, from a table (id, current name, new name) the user has seen.
 
 The requests, in a `Google Docs:update_doc` batch:
 
