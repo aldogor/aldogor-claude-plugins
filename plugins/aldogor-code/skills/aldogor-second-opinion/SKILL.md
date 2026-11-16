@@ -67,7 +67,7 @@ A reviewer that fails or times out is reported with its log, and the others go a
 
 **Alternative draft.** The drafts one after another, Claude's included, each headed by its reviewer and its idea in one line, then one line on what sets each apart.
 
-On the packet path the answers stay in `out/` for the user to open. The user then chooses: which points to take, which draft, or a combination they describe. When the user asks for one merged version, Claude writes it and lists what it took from each reviewer and what it left out. Only then does Claude change the project's files.
+On the packet path the answers stay in `out/` for the user to open. The user then chooses: which points to take, which draft, or a combination they describe. When the user asks for one merged version, Claude writes it and lists what it took from each reviewer and what it left out. Only then does Claude change the project's files. When the user remarks on a passage of a version taken as it is, Claude gives its reading and asks whether to rewrite the passage or send it back to the same reviewer, in the same chat of its web app or as a new run the user chooses.
 
 ## Quota
 

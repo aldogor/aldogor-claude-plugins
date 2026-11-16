@@ -89,19 +89,19 @@ Italian: `# Journal` with "Registro cronologico delle verifiche, delle decisioni
 
 State these in the project's CLAUDE.md so later sessions and tidy passes find them there:
 
-- Git is the changelog: no CHANGELOG.md, no "modifiche" or "changelog" sections in documents; the reasoning behind a change goes in JOURNAL.md, the change itself in the commit message.
-- Commit at every consolidated decision or completed step. A private repository of research practice with a remote says that the push follows the commit; every other says that at the end of a session Claude says what is not on the remote and asks whether to push. A repository kept local on purpose states that it has no remote and is never pushed.
-- The git practice, one line naming the project's kind, which aldogor-handoff applies at every close:
+- A repository kept local on purpose states that it has no remote and is never pushed.
+- The git practice, one line that starts with `Git practice:` (`Pratica git:`) and names the project's kind, which aldogor-handoff applies at every close:
   - research: all work on `main`, committed as it consolidates;
   - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote; a plan of several tasks runs one task at a time, each committed and reported before the next starts;
   - shared (collaborators may edit the repository): the development practice, with every branch reaching `main` through a pull request that the owner merges.
-- In a project with a user interface, a change to a screen starts from a list of what the screen does today and ends with the user's walk through the running application against that list; the accessibility checks (axe and pa11y, at 320 px too) run in CI.
-- Working files carry no date in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
+  - A journal entry is committed with the work it records, on that work's branch; a change to the journal alone, with no work branch open, goes to `main` in the research and development practices.
+- In a project with a user interface, a change to a screen starts from a list of what the screen does today and ends with the user's walk through the running application against that list. Where screens have their own web addresses and the project has CI, the accessibility checks (axe and pa11y, at 320 px too) run there.
+- Working files carry no date or version number in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
 - For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.
 
 ## Project CLAUDE.md
 
-Offer a starter CLAUDE.md with an opening paragraph (what the project is, in two or three sentences) and three sections: where authority lives (which document owns what, one line per file saying what it holds and when to update it, and one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, and the conventions above. A development project adds its own sections after these (data invariants, code patterns). The file carries no project state, which is the journal's open list, and no inventory of the tree, which is the README's; the user's global rules are restated only in a repository that collaborators work in, since they do not load them. The journal's line reads, in the project's language (adapt the canonical document's name):
+Offer a starter CLAUDE.md with an opening paragraph (what the project is, in two or three sentences) and three sections: where authority lives (which document owns what, one line per authoritative document saying what it holds and when to update it, and one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, and the conventions above. A development project adds its own sections after these (data invariants, code patterns). The file carries no project state, which is the journal's open list, and no inventory of the tree, which is the README's; the user's global rules are restated only in a repository that collaborators work in, since they do not load them. The journal's line reads, in the project's language (adapt the canonical document's name):
 
 ```markdown
 - `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its closing "Open" list is the project's state.
@@ -119,7 +119,7 @@ When the project continues work started in a claude.ai Project, its chats and me
 
 ## Visibility, decided once
 
-Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. Only the GitHub name carries the suffix: the private repository is cloned in the folder `<name>`, and the public one in the sibling folder `<name>-public`, which is publish.txt's `target:`. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
+Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. Each clone's folder carries its GitHub name, as the desktop app's sidebar does: the private repository is cloned in the folder `<name>-internal`, and the public one in the sibling folder `<name>`, which is publish.txt's `target:`. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
 
 ## GitHub
 

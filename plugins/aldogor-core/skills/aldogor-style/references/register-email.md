@@ -13,7 +13,7 @@ Di solito il registro è propositivo più che impositivo, quanto lo consentono l
   Il precedente che giustifica la domanda di solito resta fuori. (2026-11-10)
 - Prima: «ti mando in allegato quanto richiesto: il prospetto compilato; la dichiarazione; il contratto»
   Dopo: «ti mando in allegato tutti i documenti richiesti. Riporto qui anche i dati inseriti nel prospetto»
-  Gli allegati non si elencano; nella mail si ripetono i dati nella forma in cui il destinatario li chiede. (2026-11-10)
+  Gli allegati non si elencano. I dati si ripetono nel testo quando il destinatario li chiede nel testo; quando chiede un file, basta il file. (2026-11-16)
 - Prima: «Il testo è scritto nella forma in cui verrà registrato, e vi chiederei di leggerlo così. Alcune frasi descrivono quindi passaggi che devono ancora avvenire […]»
   Dopo: «Due colleghi avevano proposto di farci aiutare dai bibliotecari per una revisione, e l'idea sarebbe di avere un protocollo definitivo e registrabile nelle prossime settimane.»
   A chi è dentro il lavoro si dice lo stato in una frase, non come leggere il documento. (2026-11-10)

@@ -4,7 +4,8 @@
 The conventions are those aldogor-project-setup writes and aldogor-handoff applies; they change over time, and
 this script changes with them, in the same commit. It reads the repository and changes nothing:
   - CLAUDE.md exists and names the git practice on a "Git practice:" or "Pratica git:" line (research,
-    development or shared);
+    development or shared), or imports AGENTS.md (`@AGENTS.md`) that carries the line;
+  - the main branch is named main;
   - git: commits ahead of or behind the upstream (after `git fetch` with --fetch), uncommitted changes,
     stashes, and local branches already merged into the main branch;
   - JOURNAL.md, when present, ends with one open list (`## Open` or `## Aperto`) rather than a list at the end
@@ -21,9 +22,8 @@ this script changes with them, in the same commit. It reads the repository and c
   - publication: a public version is published from an include-list (publish.txt) into a sibling clone with
     aldogor-share's publish script, so an exclude-list (public_exclude.txt) or a remote named public in the
     working clone is the older model;
-  - the repository's folder is never named `<name>-internal`: that suffix names only the private GitHub
-    repository of a project with a public version, whose clone is the folder `<name>` and whose public
-    clone is the sibling folder `<name>-public`;
+  - the repository's folder carries its GitHub repository's name: a project with a public version is cloned
+    in the folder `<name>-internal`, and its public clone is the sibling folder `<name>`;
   - every tracked top-level folder belongs to the standard layout (docs/, literature/, data/, outputs/,
     scripts/, tests/ and archive/, plus the src/, public/, assets/, app/ and gradle/ that development stacks
     bring) or has its line in README.md or CLAUDE.md saying what it holds: a folder the project needs is
@@ -135,9 +135,16 @@ def main_branch(repo: pathlib.Path) -> str:
 
 
 def practice(repo: pathlib.Path) -> str:
-    """The git practice named in CLAUDE.md, normalized to English, or "-" when none is named."""
+    """The git practice named in CLAUDE.md, normalized to English, or "-" when none is named.
+
+    A CLAUDE.md that imports AGENTS.md (`@AGENTS.md`, as a repository shared with collaborators on other tools
+    does) may keep the line there, so AGENTS.md is read when CLAUDE.md itself names no practice."""
     f = repo / "CLAUDE.md"
-    m = PRACTICE.search(f.read_text(encoding="utf-8", errors="replace")) if f.is_file() else None
+    text = f.read_text(encoding="utf-8", errors="replace") if f.is_file() else ""
+    m = PRACTICE.search(text)
+    agents = repo / "AGENTS.md"
+    if not m and "@AGENTS.md" in text and agents.is_file():
+        m = PRACTICE.search(agents.read_text(encoding="utf-8", errors="replace"))
     return PRACTICE_NAMES.get(m.group(1).lower(), m.group(1).lower()) if m else "-"
 
 
@@ -194,10 +201,20 @@ def publication_findings(repo: pathlib.Path) -> list[str]:
             out.append(f"{rel} is an exclude-list: publish with an include-list (publish.txt) through aldogor-share's publish script")
     if "public" in git(repo, "remote").stdout.split():
         out.append("the public repository is a remote of this clone: publish into a sibling clone with aldogor-share's publish script")
-    # -internal belongs to the GitHub repository's name only; the local folder carries the bare project name.
-    if repo.name.endswith("-internal"):
-        out.append(f"folder named {repo.name}: only the GitHub repository carries -internal, rename the folder to {repo.name.removesuffix('-internal')}")
+    # Every clone's folder carries its GitHub repository's name, the -internal of a private repository with a
+    # public version included, so that the folder, the repository and the desktop app's sidebar (which shows the
+    # GitHub name) agree. Case is ignored, since Windows folders are case-insensitive.
+    name = github_name(repo)
+    if name and name.lower() != repo.name.lower():
+        out.append(f"folder named {repo.name}, its GitHub repository is {name}: rename the folder to {name} (scripts/move_project.py in aldogor-claude-setup, with the app closed)")
     return out
+
+
+def github_name(repo: pathlib.Path) -> str | None:
+    """The name of the GitHub repository that origin points to, or None without a GitHub origin."""
+    url = git(repo, "remote", "get-url", "origin").stdout.strip()
+    m = re.search(r"github\.com[:/][^/]+/([^/]+?)(?:\.git)?/?$", url)
+    return m.group(1) if m else None
 
 
 def layout_findings(repo: pathlib.Path) -> list[str]:
@@ -285,6 +302,9 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
             f.append("no CLAUDE.md")
         elif named == "-":
             f.append("git practice not named in CLAUDE.md")
+        # The main branch is called main in every repository (aldogor-project-setup renames it before any push).
+        if base and base != "main":
+            f.append(f"main branch named {base}: rename it to main (git branch -m {base} main, then on the remote)")
     if ahead:
         f.append(f"{plural(ahead, 'commit')} not pushed")
     if behind:

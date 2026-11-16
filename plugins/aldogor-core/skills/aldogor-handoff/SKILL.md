@@ -12,7 +12,7 @@ The close is a short sequence that the user walks through with you, in this orde
 
 Before anything is written, list what the session leaves open: questions put to the user and never answered, decisions still pending, work started and not finished, things promised in the chat ("I'll check X"), and background tasks or agents still running. Each thread closes now if it can (answer it, finish it, or stop a task that is no longer needed); one that cannot close in this session becomes an open item for the journal, with what unblocks it. Running background work is waited for or stopped on the user's word, never left behind in silence.
 
-In the same round, ask the user what the next session should put first, with your recommendation drawn from the open items. The answer orders the journal's open list and becomes the prompt's next task.
+When the user has not named the next priority in this session, ask in the same round what the next session should put first, with your recommendation drawn from the open items. The answer orders the journal's open list and becomes the prompt's next task. A closed project has no next priority.
 
 ## 2. The canonical state
 
@@ -36,7 +36,7 @@ If the session verified or decided nothing and no item changed state, there is n
 
 The next session reads a few documents first and trusts them, so they have to describe the project as it now is. The pass covers the files the session created or changed, the project's CLAUDE.md and README, the state document, the journal, and the documents CLAUDE.md names as authoritative (its key files or its table of which document owns what). Each is read against the current state, looking for a path or a file that no longer exists, a line describing a decision since changed, two documents that say different things about the same fact, and a document that only repeats another.
 
-The project also has to follow the conventions of the setup, which change over time. In Claude Code, `python <this skill's folder>/scripts/check_project.py`, run in the project, lists what the project breaks among them: the git practice named in CLAUDE.md, the journal's single open list and each entry's closing line, TODO or CHANGELOG files, `.env`, the literature folder, the placement of chat exports, the publication model, the top-level folders and root documents that neither README nor CLAUDE.md describes, the plugins the project's settings enable with no install for this folder, and the git state that step 5 settles. It changes nothing; its findings join the ones below.
+The project also has to follow the conventions of the setup, which change over time. In Claude Code, `python <this skill's folder>/scripts/check_project.py`, run in the project, lists what the project breaks among them: the git practice named in CLAUDE.md, the main branch's name, the journal's single open list and each entry's closing line, TODO or CHANGELOG files, `.env`, the literature folder, the placement of chat exports, the publication model, the top-level folders and root documents that neither README nor CLAUDE.md describes, the plugins the project's settings enable with no install for this folder, and the git state that step 5 settles. It changes nothing; its findings join the ones below.
 
 - Safe fixes are applied directly: dead references, stale lines, contradictions where the session makes the current state clear, and small convention fixes (a missing closing line in the journal, a `.gitignore` line, the practice line in CLAUDE.md).
 - Renames, moves, merges, deletions, contradictions where it is unclear which side is current, and conversions that reshape the project (a literature folder or a journal to convert) go to the user as a short list, one line each with the reason, and wait for approval; what the user defers becomes an item of the open list.
@@ -54,6 +54,8 @@ When the project is a git repository and the session can run commands, settle it
 - research: all work on the main branch;
 - development: each feature or fix on its own branch, merged into the main branch when its tests pass and then deleted;
 - shared: as development, with every branch reaching the main branch through a pull request that the owner merges.
+
+A journal entry is committed with the work it records, on that work's branch; a change to the journal alone, with no work branch open, goes to the main branch in the research and development practices.
 
 Other rules the repository sets (no remote, who merges) hold too. Where no practice is named, propose the one that fits the project and write it into CLAUDE.md on the user's word. Without a shell, this step does not apply.
 
