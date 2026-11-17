@@ -1,12 +1,14 @@
 ---
 name: aldogor-drive
 description: >-
-  Works in Google Drive files that colleagues edit, as the user, through the Google Drive, Docs, Sheets and Slides connectors: reads a Doc with its pending suggestions and comment threads, proposes changes as suggestions and comments under the user's name after one approval per document, replies to and resolves threads, accepts or rejects the suggestions the user names, reads Word and Excel files kept in Drive, and moves a text from a repository into a Google Doc. Use when the user shares a docs.google.com or drive.google.com link, asks to read, review, comment or suggest in a shared document ("commenta il documento", "suggerisci nel doc", "rispondi ai commenti", "risolvi i commenti", "accetta i suggerimenti", "leggi i commenti", "review the Google Doc", "suggest edits in the doc"), or works in a project that keeps documents in a Drive folder.
+  Works in Google Drive files that colleagues edit, as the user, through the Google Drive, Docs, Sheets and Slides connectors: reads a Doc with its pending suggestions and comment threads, proposes changes as suggestions and comments under the user's name after one approval per document, replies to and resolves threads, accepts or rejects the suggestions the user names, reads Word and Excel files kept in Drive, moves a text from a repository into a Google Doc, and files finished papers in Drive folders. Use when the user shares a docs.google.com or drive.google.com link, asks to read, review, comment or suggest in a shared document ("commenta il documento", "suggerisci nel doc", "rispondi ai commenti", "risolvi i commenti", "accetta i suggerimenti", "leggi i commenti", "review the Google Doc", "suggest edits in the doc", "riordina Drive", "archivia le carte", "reorganize my Drive"), or works in a project that keeps documents in a Drive folder.
 ---
 
 # Aldogor-drive
 
 Colleagues who do not use git work in Google Drive. Each document has one home, the place where its next version is made: a text that colleagues co-write lives in Drive; a document built by a script, from a project's bibliography or by the user's own rewriting with Claude lives in the user's repository, and Drive receives a compiled copy of each version. Nothing is mirrored or synced between the two. A project's CLAUDE.md lists each document kept in Drive, in its section on where authority lives: the link, whether it is a Google file or a Word or Excel file, who edits it, and its home.
+
+Finished papers, the documents someone issues, cites or asks for as proof, are filed in Drive by the method in [references/filing.md](references/filing.md).
 
 ## Reading
 
