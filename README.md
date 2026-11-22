@@ -1,0 +1,60 @@
+# aldogor-claude-plugins
+
+Claude plugins by Aldo Gorga, a public health researcher working on digital health and AI. They carry a way of working: sources verified before they are cited, documents reviewed for structure before prose, projects that keep a dated journal, and sessions that close with the project in order. Most of the writing guidance is for Italian and English scientific and institutional prose.
+
+## Plugins
+
+**aldogor-core**, for Claude Code and claude.ai:
+
+- `aldogor-research`: literature grounding, source selection and citation verification (PubMed, OpenAlex, Crossref), with a verdict for every reference.
+- `aldogor-style`: a two-pass review, structure then prose, with a check against the reporting guideline of the study design.
+- `aldogor-handoff`: closes a working session, brings the journal and the project's documents up to date and writes a continuation prompt.
+- `aldogor-grill`: resolves open decisions by rounds of questions with a recommended answer, or turns them into a questionnaire for someone else.
+- `aldogor-drive`: works in the Google Drive documents colleagues edit, as the user: reads a Doc with its suggestions and comment threads, proposes changes as suggestions and comments after one approval per document, and moves a text from a repository into a Google Doc.
+
+**aldogor-code**, for Claude Code only:
+
+- `aldogor-legislation`: Italian, EU and Piedmont law as in force on a date, read at the official sources, with the link to cite.
+- `aldogor-project-setup`: scaffolds a project (research or development).
+- `aldogor-tidy`: puts an existing project in order (names, stale and duplicated documents, grouping) through a plan of renames, merges and moves that the user approves, then repairs the references the changes break; `aldogor-handoff` offers it when a session's close finds disorder across the folder.
+- `aldogor-share`: before collaborators are invited or a repository goes public, checks what git will not send and what the history holds, and writes the project conventions into `CLAUDE.md`; publishes a repository's public version from its private one, through an include-list (`publish.txt`) and a sibling clone.
+- `aldogor-second-opinion`: second opinions from other models on a text, a design, a method, code or a deck. Fable answers by default, through the agent below. Gemini, when named, runs through the Antigravity CLI, signed in with the user's subscription, on a packet of copies the user approves; each reviewer returns a review or, for signed prose, an alternative draft, shown next to Claude's own view, which Claude writes first.
+- `aldogor-second-opinion-fable`: an agent on Fable that the main session consults for a second perspective on decisions, plans, visual ideas and drafts, when the user asks or the user's own instructions call for it, or as one of the reviewers of `aldogor-second-opinion`.
+
+## Install
+
+In Claude Code:
+
+```
+/plugin marketplace add aldogor/aldogor-claude-plugins
+/plugin install aldogor-core@aldogor-claude-plugins
+/plugin install aldogor-code@aldogor-claude-plugins
+```
+
+On claude.ai: Customize, Plugins, add the marketplace `aldogor/aldogor-claude-plugins`, then install aldogor-core.
+
+With aldogor-core installed both ways, the Claude desktop app hands the claude.ai copy to its Code sessions, and that copy replaces the Claude Code install and follows new versions only when claude.ai syncs the marketplace. To run the Claude Code install in the desktop app, add `"aldogor-core@inline": false` under `enabledPlugins` in `~/.claude/settings.json`.
+
+In a shared project, `.claude/settings.json` can declare the marketplace and the plugins, so that each collaborator gets them after accepting the trust prompt, and keeps receiving new versions: Claude Code updates a third-party marketplace only when `autoUpdate` is on.
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "aldogor-claude-plugins": {
+      "source": { "source": "github", "repo": "aldogor/aldogor-claude-plugins" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "aldogor-core@aldogor-claude-plugins": true
+  }
+}
+```
+
+## Conventions the skills assume
+
+A project keeps a `JOURNAL.md` of dated entries that ends with one open list, edited in place, which is the state of the work; citations are inline (author and year) and link to the DOI; dashes are never used as punctuation; a value with no source is written [n/d]. The skills work without these conventions, but they are written around them.
+
+## Provenance and licence
+
+MIT licence. The skills are maintained in the author's private configuration repository and published here. Ideas adapted from other packages are listed, with source, commit and licence, in [UPSTREAM.md](UPSTREAM.md); where a source carries a noncommercial licence (academic-research-skills, CC BY-NC 4.0), only workflow ideas were taken and re-authored, with no text copied.

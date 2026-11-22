@@ -1,0 +1,106 @@
+[
+  {
+    "id": "Alpha_2021",
+    "type": "article-journal",
+    "title": "Screen time and sleep in adolescents: a cohort study",
+    "author": [
+      {
+        "family": "Alpha",
+        "given": "Anna"
+      },
+      {
+        "family": "Beta",
+        "given": "Bruno"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2021
+        ]
+      ]
+    },
+    "container-title": "Journal of Examples",
+    "volume": "7",
+    "issue": "2",
+    "page": "101-110",
+    "DOI": "10.5555/alpha.2021",
+    "PMID": "10000001",
+    "PMCID": "PMC0000001",
+    "custom": {
+      "cited_in": "chapter 1"
+    }
+  },
+  {
+    "id": "Rossi_2024",
+    "type": "article-journal",
+    "title": "Uso dei social media negli adolescenti italiani",
+    "language": "it",
+    "author": [
+      {
+        "family": "Rossi",
+        "given": "Maria"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2024
+        ]
+      ]
+    },
+    "container-title": "Rivista di Esempio",
+    "DOI": "10.5555/rossi.2024",
+    "custom": {
+      "cited_in": "chapter 2",
+      "screening": {
+        "decision": "include",
+        "rubric": "v1"
+      }
+    },
+    "editor": [
+      {
+        "family": "Bianchi",
+        "given": "Anna"
+      }
+    ]
+  },
+  {
+    "id": "Statista_2024",
+    "type": "webpage",
+    "title": "Mobile operating systems market share",
+    "author": [
+      {
+        "literal": "Statista"
+      }
+    ],
+    "container-title": "Statista",
+    "URL": "https://www.statista.com/example",
+    "custom": {
+      "cited_in": "introduction"
+    }
+  },
+  {
+    "id": "WHO_2025",
+    "type": "report",
+    "title": "Obesity and overweight",
+    "author": [
+      {
+        "literal": "World Health Organization"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2025
+        ]
+      ]
+    },
+    "publisher": "World Health Organization",
+    "URL": "https://www.who.int/example",
+    "custom": {
+      "cited_in": "section 1",
+      "summary": "Fact sheet with the global figures on obesity and overweight."
+    }
+  }
+]

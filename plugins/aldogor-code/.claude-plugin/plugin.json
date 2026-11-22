@@ -1,0 +1,8 @@
+{
+  "name": "aldogor-code",
+  "version": "0.12.1",
+  "description": "Aldo's Claude Code-only skills and agents: Italian, EU and Piedmont legislation at a date, project setup and tidying, preparing a repository for collaborators, second opinions from Gemini through its command-line tool and from an agent on Fable",
+  "author": {
+    "name": "Aldo Gorga"
+  }
+}

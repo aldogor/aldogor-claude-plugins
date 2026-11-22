@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+"""Checks one project repository against the conventions of the user's setup and reports what it breaks.
+
+The conventions are those aldogor-project-setup writes and aldogor-handoff applies; they change over time, and
+this script changes with them, in the same commit. It reads the repository and changes nothing:
+  - CLAUDE.md exists and names the git practice on a "Git practice:" or "Pratica git:" line (research,
+    development or shared), or imports AGENTS.md (`@AGENTS.md`) that carries the line;
+  - the main branch is named main;
+  - git: commits ahead of or behind the upstream (after `git fetch` with --fetch), uncommitted changes,
+    stashes, and local branches already merged into the main branch;
+  - JOURNAL.md, when present, ends with one open list (`## Open` or `## Aperto`) rather than a list at the end
+    of each entry (`### Open as of`, `### Aperto al`), and its latest entry, from 28 September 2026 on, closes
+    with its Opened and closed line (`Opened: ...; closed: ...`, `Aperti: ...; chiusi: ...`);
+  - no TODO.md and no CHANGELOG.md: the open list is the journal's, and git is the changelog;
+  - `.env` is not tracked and is ignored;
+  - the literature folder (literature/ or docs/literature/), when present, holds bibliography.json (a folder
+    that keeps the older bibliography.csv is converted once), git tracks no other file of it, and the
+    .gitignore keeps its PDFs and texts local;
+  - the claude.ai chat exports: a project repository holds archive/chat-export-claude-ai/ only as an untracked
+    working folder while its chats are distilled into the journal (aldogor-claude-setup keeps its own archive),
+    and a public repository tracks JOURNAL.md or TODO.md only when they are written for the public;
+  - publication: a public version is published from an include-list (publish.txt) into a sibling clone with
+    aldogor-share's publish script, so an exclude-list (public_exclude.txt) or a remote named public in the
+    working clone is the older model;
+  - the repository's folder carries its GitHub repository's name: a project with a public version is cloned
+    in the folder `<name>-internal`, and its public clone is the sibling folder `<name>`;
+  - every tracked top-level folder belongs to the standard layout (docs/, literature/, data/, outputs/,
+    scripts/, tests/ and archive/, plus the src/, public/, assets/, app/ and gradle/ that development stacks
+    bring) or has its line in README.md or CLAUDE.md saying what it holds: a folder the project needs is
+    described, drift is not;
+  - every tracked document in the root (md, csv, docx, pdf, pptx, xlsx) has the same line in README.md or
+    CLAUDE.md, apart from the repository's own files (README.md, CLAUDE.md, CLAUDE.local.md, JOURNAL.md,
+    AGENTS.md, CONTRIBUTING.md, LICENSE or LICENCE under any extension) and the TODO.md and CHANGELOG.md
+    reported above;
+  - every plugin that .claude/settings.json (or settings.local.json) enables is installed for this folder: the
+    settings file enables plugins but installs nothing, and each machine records its installs per folder in
+    ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist).
+Naming, stale content and the grouping of files are judgments, left to aldogor-tidy.
+
+Usage:
+  python check_project.py [PATH] [--fetch] [--no-github]
+
+PATH defaults to the working directory (any folder inside the repository). --no-github skips the visibility
+lookup through the gh CLI. The first line gives the repository's state (branch, practice, remote, journal) and
+the number of words of CLAUDE.md, which is information and never a finding: the file loads into every session
+of the project. Every finding is one line; the exit code is 0 whether or not there are findings.
+Runs with Python 3.10 or later on Windows, macOS and Linux, with git on the PATH.
+"""
+
+import argparse
+import json
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+
+SETUP_REPO = "aldogor-claude-setup"
+ARCHIVE = "archive/chat-export-claude-ai"
+PRACTICE = re.compile(r"(?:Git practice|Pratica git)\s*:\s*\**\s*(\w+)", re.I)
+PRACTICE_NAMES = {"research": "research", "ricerca": "research", "development": "development", "sviluppo": "development", "shared": "shared", "condiviso": "shared", "condivisa": "shared"}
+OLD_LIST = re.compile(r"^### (Open as of|Aperto al)\b", re.M)
+NEW_LIST = re.compile(r"^## (Open|Aperto)\s*$", re.M)
+ENTRY = re.compile(r"^## (\d{4}-\d{2}-\d{2})\b.*$", re.M)
+CLOSING_LINE = re.compile(r"^\s*(?:-\s*)?(Opened|Closed|Aperti|Chiusi)\s*:", re.I | re.M)
+# The date from which each journal entry closes with its Opened and closed line.
+CLOSING_LINE_SINCE = "2026-09-28"
+LITERATURE_DIRS = ("literature", "docs/literature")
+# The top-level folders of the standard layout: the vocabulary of a repository (docs, literature, data, outputs,
+# scripts, tests, archive) and the folders that development stacks bring. Any other tracked top-level folder is
+# described in the project's README.md or CLAUDE.md.
+LAYOUT = {"docs", "literature", "archive", "data", "scripts", "outputs", "src", "tests", "public", "assets", "app", "gradle"}
+# The files where a project says what a folder or a root document outside the standard layout holds.
+DECLARED_IN = ("README.md", "CLAUDE.md")
+# Root files with these extensions are documents someone reads, so each is described like a folder; code and
+# configuration in the root belong to the stack and are left alone.
+DOCUMENT_EXT = {".md", ".csv", ".docx", ".pdf", ".pptx", ".xlsx"}
+# The repository's own root documents (lowercase, since some projects write Readme.md or license.md). TODO.md
+# and CHANGELOG.md are here because check() reports them with their own finding.
+OWN_DOCUMENTS = {"readme.md", "claude.md", "claude.local.md", "journal.md", "agents.md", "contributing.md", "todo.md", "changelog.md"}
+
+
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    """Run a command and capture its text output; a missing program counts as a failed run."""
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        return subprocess.CompletedProcess(cmd, 127, "", "not found")
+
+
+def git(repo: pathlib.Path, *args: str) -> subprocess.CompletedProcess:
+    return run(["git", "-C", str(repo), *args])
+
+
+def plural(n: int, word: str) -> str:
+    """"1 commit", "2 commits": the count with the word in the right number."""
+    return f"{n} {word}{'' if n == 1 else ('es' if word.endswith('sh') else 's')}"
+
+
+def github_visibility(repo: pathlib.Path) -> str:
+    """public or private from GitHub, local-only without an origin, remote-unknown when gh gives no answer."""
+    res = git(repo, "remote", "get-url", "origin")
+    if res.returncode != 0 or not res.stdout.strip():
+        return "local-only"
+    # owner/name from https://github.com/owner/name(.git) or git@github.com:owner/name(.git)
+    name = re.sub(r"^.*github\.com[:/]", "", re.sub(r"\.git$", "", res.stdout.strip()))
+    if not shutil.which("gh"):
+        return "remote-unknown"
+    vis = run(["gh", "repo", "view", name, "--json", "visibility", "--jq", ".visibility"])
+    return vis.stdout.strip().lower() if vis.returncode == 0 and vis.stdout.strip() else "remote-unknown"
+
+
+def tracked(repo: pathlib.Path, *paths: str) -> list[str]:
+    """The files git tracks under the given paths."""
+    # core.quotepath=off: a name with accented letters arrives as written, where git's default is a quoted,
+    # escaped string that no check on names or extensions would recognize.
+    return [l for l in git(repo, "-c", "core.quotepath=off", "ls-files", *paths).stdout.splitlines() if l.strip()]
+
+
+def ignored(repo: pathlib.Path, path: str) -> bool:
+    """True when the repository's ignore rules cover the path, whether or not it exists."""
+    return git(repo, "check-ignore", "-q", "--no-index", path).returncode == 0
+
+
+def main_branch(repo: pathlib.Path) -> str:
+    """The repository's main branch: the remote's HEAD when known, else main, else master, else the current branch."""
+    head = git(repo, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+    if head.returncode == 0 and head.stdout.strip():
+        return head.stdout.strip().split("/", 1)[1]
+    for name in ("main", "master"):
+        if git(repo, "rev-parse", "--verify", "-q", f"refs/heads/{name}").returncode == 0:
+            return name
+    return git(repo, "branch", "--show-current").stdout.strip()
+
+
+def practice(repo: pathlib.Path) -> str:
+    """The git practice named in CLAUDE.md, normalized to English, or "-" when none is named.
+
+    A CLAUDE.md that imports AGENTS.md (`@AGENTS.md`, as a repository shared with collaborators on other tools
+    does) may keep the line there, so AGENTS.md is read when CLAUDE.md itself names no practice."""
+    f = repo / "CLAUDE.md"
+    text = f.read_text(encoding="utf-8", errors="replace") if f.is_file() else ""
+    m = PRACTICE.search(text)
+    agents = repo / "AGENTS.md"
+    if not m and "@AGENTS.md" in text and agents.is_file():
+        m = PRACTICE.search(agents.read_text(encoding="utf-8", errors="replace"))
+    return PRACTICE_NAMES.get(m.group(1).lower(), m.group(1).lower()) if m else "-"
+
+
+def journal_form(text: str | None) -> str:
+    """one list, N old lists, no open list, or - when the repository has no journal."""
+    if text is None:
+        return "-"
+    old = len(OLD_LIST.findall(text))
+    if old:
+        return plural(old, "old list")
+    return "one list" if NEW_LIST.search(text) else "no open list"
+
+
+def latest_entry_without_closing_line(text: str) -> str | None:
+    """The date of the journal's latest entry when it lacks its Opened and closed line, else None.
+
+    Entries dated before CLOSING_LINE_SINCE predate the convention and are not reported."""
+    entries = list(ENTRY.finditer(text))
+    if not entries:
+        return None
+    last = entries[-1]
+    end = NEW_LIST.search(text, last.end())
+    body = text[last.end():end.start() if end else len(text)]
+    date = last.group(1)
+    return date if date >= CLOSING_LINE_SINCE and not CLOSING_LINE.search(body) else None
+
+
+# A path named in the journal's header: in backticks, or bare with a document's extension. URLs are not paths.
+HEADER_PATH = re.compile(r"`([^`\s]+)`|(?<![\w/:.-])((?:[\w.-]+/)*[\w-]+\.(?:md|qmd|docx|xlsx|pdf|tex|csv|txt|ya?ml|json))\b")
+
+
+def journal_header_missing(text: str, repo: pathlib.Path) -> list[str]:
+    """The files or folders the journal's header names (the text before its first section) that do not exist.
+
+    The header says where consolidated decisions live; a canonical document renamed or removed leaves it pointing
+    nowhere. A backticked token counts as a path only when it has a slash or a file extension."""
+    first = re.search(r"^## ", text, re.M)
+    header = text[:first.start()] if first else text
+    missing = []
+    for match in HEADER_PATH.finditer(header):
+        token = (match.group(1) or match.group(2)).rstrip(".,;:)")
+        if "://" in token or not ("/" in token or re.search(r"\.\w{1,5}$", token)):
+            continue
+        if not (repo / token).exists() and token not in missing:
+            missing.append(token)
+    return missing
+
+
+def literature_findings(repo: pathlib.Path) -> list[str]:
+    """The literature folder against its convention: bibliography.json present, nothing else tracked, texts ignored.
+    A folder that still keeps the older bibliography.csv is reported once, as a conversion to run."""
+    out = []
+    for rel in LITERATURE_DIRS:
+        if not (repo / rel).is_dir():
+            continue
+        if (repo / rel / "bibliography.json").is_file():
+            pass
+        elif (repo / rel / "bibliography.csv").is_file():
+            out.append(f"{rel}/ keeps the older bibliography.csv: turn it into bibliography.json with `literature.py convert` (aldogor-research)")
+        else:
+            out.append(f"{rel}/ has no bibliography.json: convert it with aldogor-research's literature script")
+        others = [f for f in tracked(repo, rel) if f not in (f"{rel}/bibliography.json", f"{rel}/bibliography.csv")]
+        if others:
+            out.append(f"{plural(len(others), 'file')} of {rel}/ tracked by git besides bibliography.json: untrack them (git rm --cached)")
+        if not ignored(repo, f"{rel}/any.pdf") or not ignored(repo, f"{rel}/any.md"):
+            out.append(f"{rel}/ PDFs and texts not ignored: add `{rel}/*` and `!{rel}/bibliography.json` to .gitignore")
+    return out
+
+
+def publication_findings(repo: pathlib.Path) -> list[str]:
+    """The public version against the publication model: an include-list (publish.txt) and a sibling clone."""
+    out = []
+    for rel in ("public_exclude.txt", "config/public_exclude.txt"):
+        if (repo / rel).is_file():
+            out.append(f"{rel} is an exclude-list: publish with an include-list (publish.txt) through aldogor-share's publish script")
+    if "public" in git(repo, "remote").stdout.split():
+        out.append("the public repository is a remote of this clone: publish into a sibling clone with aldogor-share's publish script")
+    # Every clone's folder carries its GitHub repository's name, the -internal of a private repository with a
+    # public version included, so that the folder, the repository and the desktop app's sidebar (which shows the
+    # GitHub name) agree. Case is ignored, since Windows folders are case-insensitive.
+    name = github_name(repo)
+    if name and name.lower() != repo.name.lower():
+        out.append(f"folder named {repo.name}, its GitHub repository is {name}: rename the folder to {name} (scripts/move_project.py in aldogor-claude-setup, with the app closed)")
+    return out
+
+
+def github_name(repo: pathlib.Path) -> str | None:
+    """The name of the GitHub repository that origin points to, or None without a GitHub origin."""
+    url = git(repo, "remote", "get-url", "origin").stdout.strip()
+    m = re.search(r"github\.com[:/][^/]+/([^/]+?)(?:\.git)?/?$", url)
+    return m.group(1) if m else None
+
+
+def layout_findings(repo: pathlib.Path) -> list[str]:
+    """Tracked top-level folders and root documents outside the standard layout that neither README.md nor
+    CLAUDE.md names: a folder as `folder/`, a document by its file name."""
+    text = "\n".join((repo / n).read_text(encoding="utf-8", errors="replace") for n in DECLARED_IN if (repo / n).is_file())
+    files = [p for p in tracked(repo) if not p.startswith(".")]
+    tops = sorted({p.split("/")[0] for p in files if "/" in p} - LAYOUT)
+    docs = sorted(p for p in files if "/" not in p and pathlib.PurePosixPath(p).suffix.lower() in DOCUMENT_EXT
+                  and p.lower() not in OWN_DOCUMENTS and not p.lower().startswith(("license", "licence")))
+    # The name stands on its own in the text: the slash closes a folder's name, and a document's name is not the
+    # start of a longer one (notes.md inside notes.md.bak), while the full stop that ends a sentence may follow it.
+    undescribed = [("top-level folder", f"{t}/") for t in tops if not re.search(rf"(?<![\w.-]){re.escape(t)}/", text)]
+    undescribed += [("root document", d) for d in docs if not re.search(rf"(?<![\w.-]){re.escape(d)}(?![\w-])", text)]
+    return [f"{kind} {name} is outside the standard layout and neither README.md nor CLAUDE.md says what it holds" for kind, name in undescribed]
+
+
+def claude_dir() -> pathlib.Path:
+    """The Claude Code folder: CLAUDE_CONFIG_DIR when set, otherwise ~/.claude."""
+    return pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR") or pathlib.Path.home() / ".claude")
+
+
+def plugin_findings(repo: pathlib.Path) -> list[str]:
+    """Plugins the project's settings enable that have no install for this folder, and so do not load here.
+
+    A user-scope install covers every folder; otherwise the registry needs a record of the settings file's scope
+    (project for settings.json, local for settings.local.json) whose projectPath is this folder."""
+    registry = claude_dir() / "plugins" / "installed_plugins.json"
+    here = os.path.normcase(os.path.normpath(repo))
+    out = []
+    for rel, scope in ((".claude/settings.json", "project"), (".claude/settings.local.json", "local")):
+        settings = repo / rel
+        if not settings.is_file() or not registry.is_file():
+            continue
+        try:
+            enabled = [k for k, v in (json.loads(settings.read_text(encoding="utf-8")).get("enabledPlugins") or {}).items() if v is True]
+            records = json.loads(registry.read_text(encoding="utf-8")).get("plugins", {})
+        except (json.JSONDecodeError, AttributeError):
+            out.append(f"{rel} or the plugin registry is not valid JSON")
+            continue
+        for pid in enabled:
+            if any(r.get("scope") == "user" or (r.get("scope") == scope and os.path.normcase(os.path.normpath(r.get("projectPath") or "")) == here) for r in records.get(pid, [])):
+                continue
+            out.append(f"{pid} is enabled in {rel} but not installed for this folder, so it does not load: claude plugin install {pid} --scope {scope}")
+    return out
+
+
+def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False, mirror: bool = False) -> dict:
+    """The project's state and the conventions it breaks, as a dict whose "findings" lists one line each.
+
+    visibility: public, private, local-only or remote-unknown; None asks GitHub. mirror: a generated copy of
+    another repository (the public plugins), checked for git state and .env only. "claude_words" is the number
+    of words of CLAUDE.md as a string like the other fields, "-" without the file: information, never a finding."""
+    top = git(repo, "rev-parse", "--show-toplevel")
+    if top.returncode != 0:
+        raise SystemExit(f"{repo} is not inside a git repository")
+    repo = pathlib.Path(top.stdout.strip())
+    if visibility is None:
+        visibility = github_visibility(repo)
+    if fetch and git(repo, "remote").stdout.strip():
+        git(repo, "fetch", "-q", "--prune")
+
+    branch = git(repo, "branch", "--show-current").stdout.strip() or "(detached)"
+    counts = git(repo, "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
+    if counts.returncode == 0:
+        behind, ahead = (int(x) for x in counts.stdout.split())
+        remote = f"+{ahead} -{behind}"
+    else:
+        behind = ahead = 0
+        remote = "no upstream"
+    dirty = len([l for l in git(repo, "status", "--porcelain").stdout.splitlines() if l.strip()])
+    stashes = len(git(repo, "stash", "list").stdout.splitlines())
+    base = main_branch(repo)
+    merged = [b.strip() for b in git(repo, "branch", "--merged", base, "--format=%(refname:short)").stdout.splitlines() if b.strip() and b.strip() not in (base, branch)]
+    journal_path = repo / "JOURNAL.md"
+    journal_text = journal_path.read_text(encoding="utf-8", errors="replace") if journal_path.is_file() else None
+    named = "mirror" if mirror else practice(repo)
+    journal = journal_form(journal_text)
+    claude_md = repo / "CLAUDE.md"
+    words = str(len(claude_md.read_text(encoding="utf-8", errors="replace").split())) if claude_md.is_file() else "-"
+
+    f = []
+    if not mirror:
+        if not (repo / "CLAUDE.md").is_file():
+            f.append("no CLAUDE.md")
+        elif named == "-":
+            f.append("git practice not named in CLAUDE.md")
+        # The main branch is called main in every repository (aldogor-project-setup renames it before any push).
+        if base and base != "main":
+            f.append(f"main branch named {base}: rename it to main (git branch -m {base} main, then on the remote)")
+    if ahead:
+        f.append(f"{plural(ahead, 'commit')} not pushed")
+    if behind:
+        f.append(f"{plural(behind, 'commit')} behind the remote")
+    if dirty:
+        f.append(f"{plural(dirty, 'uncommitted change')}")
+    if stashes:
+        f.append(plural(stashes, "stash"))
+    if merged:
+        f.append("merged branches not deleted: " + ", ".join(merged))
+    if journal_text is not None:
+        if "old list" in journal:
+            f.append(f"journal: {journal} to convert into one open list at the end")
+        elif journal == "no open list":
+            f.append("journal without an open list at the end")
+        missing = latest_entry_without_closing_line(journal_text)
+        if missing:
+            f.append(f"journal: the entry of {missing} has no Opened and closed line")
+        for path in journal_header_missing(journal_text, repo):
+            f.append(f"journal: its header names {path}, which does not exist")
+    for name in ("TODO.md", "CHANGELOG.md"):
+        if (repo / name).is_file() and not mirror:
+            f.append(f"{name} present: fold it into the journal's open list, or leave the changes to git")
+    if tracked(repo, ".env"):
+        f.append(".env tracked by git")
+    elif not ignored(repo, ".env"):
+        f.append(".env not ignored")
+    if not mirror:
+        f += literature_findings(repo)
+        f += publication_findings(repo)
+        f += layout_findings(repo)
+        f += plugin_findings(repo)
+    present = (repo / ARCHIVE).exists()
+    archive_tracked = present and bool(tracked(repo, ARCHIVE))
+    if visibility == "public" and tracked(repo, "JOURNAL.md", "TODO.md"):
+        f.append("JOURNAL/TODO tracked in a public repo: confirm they are written for the public")
+    if present and repo.name != SETUP_REPO:
+        f.append("chat archive tracked: distil into the journal, keep knowledge documents in archive/, remove" if archive_tracked else "chat export working folder pending: distil into the journal, then delete")
+    return {
+        "repo": repo.name, "branch": branch, "practice": named, "remote": remote, "visibility": visibility,
+        "journal": journal, "archive": ("tracked" if archive_tracked else "untracked") if present else "-",
+        "claude_words": words, "findings": f,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("path", nargs="?", default=".", help="a folder inside the repository (default: the working directory)")
+    ap.add_argument("--fetch", action="store_true", help="git fetch before comparing with the upstream")
+    ap.add_argument("--no-github", action="store_true", help="skip the visibility lookup through gh")
+    args = ap.parse_args(argv)
+    # A Windows console on cp1252 cannot print every character: replace what it lacks, never crash.
+    sys.stdout.reconfigure(errors="replace")
+    row = check(pathlib.Path(args.path), visibility="remote-unknown" if args.no_github else None, fetch=args.fetch)
+    print(f"{row['repo']}: branch {row['branch']}, practice {row['practice']}, remote {row['remote']}, journal {row['journal']}, CLAUDE.md words {row['claude_words']}")
+    for line in row["findings"]:
+        print(f"- {line}")
+    if not row["findings"]:
+        print("- conventions: ok")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

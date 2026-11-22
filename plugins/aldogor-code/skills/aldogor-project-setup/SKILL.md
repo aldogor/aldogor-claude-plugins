@@ -1,0 +1,139 @@
+---
+name: aldogor-project-setup
+description: >-
+  Scaffolds a new project the user's way: required files, research tree, journal, development-or-research choice, private GitHub repo. Use when the user asks to create or set up a project or repository ("new project", "nuovo progetto", "scaffold", "aldogor-project-setup", "git init") or to add JOURNAL.md to a project. Putting an existing project in order is aldogor-tidy's.
+---
+
+# Aldogor-project-setup
+
+Every new project starts the same way; this skill carries the checklist so no session reinvents it. The two questions it must ask before scaffolding, in this order: is this a development project or a research project; may the repository ever become public. Never skip to the scaffold without the answers.
+
+## Required files, any project
+
+- `.gitignore` including at least: `.env`, `__pycache__/`, `.DS_Store`, `*.log`
+- `.gitattributes` holding `* text=auto`, so that a file rewritten with other line endings does not show as changed and "git status clean" means what it says
+- in a project whose code reads secrets or keys, `.env` holds them and is never committed, and `.env.example`, committed, lists the same names with placeholders; a project that reads none has neither
+- `README.md`: first paragraph must be able to stand alone as the repo description; then one line per top-level entry, saying what it holds
+- `git init`, first commit after the skeleton exists; rename the branch to `main` before any push
+
+## Research-project structure
+
+For research projects (protocols, papers, reviews, data work), the base tree:
+
+```
+project/
+├── docs/         # working documents: protocol, note, drafts, deliverables
+├── literature/   # sources: bibliography.json tracked, their PDFs and texts local
+├── archive/      # frozen copies sent to others, superseded versions, imported chat history
+├── JOURNAL.md    # the why, and what is open
+├── CLAUDE.md
+└── README.md
+```
+
+When the project has data (analyses, extractions, datasets), add the data subtree; do not create it empty for a writing-only project:
+
+```
+├── data/
+│   ├── raw/          # original data, never modified
+│   └── processed/    # cleaned/transformed data, tidy
+├── scripts/          # analysis code
+└── outputs/          # results, figures, tables
+```
+
+`data/raw/` immutability and "preserve originals, log transformations" are absolute rules, worth restating in the project's CLAUDE.md. Processed data is tidy: one table per file, one observation per row, one variable per column, one value per cell, plain CSV with a codebook next to it (variable, type, unit, allowed values, source); the scripts that produce it are the transformation log.
+
+Literature: one flat folder, `literature/` (`docs/literature/` in a development repository whose research side lives in `docs/`), managed with the literature script of aldogor-research (`scripts/literature.py`, described in its references/literature.md). `bibliography.json`, a CSL JSON array that Pandoc reads as it is, is the record and the only file of the folder git tracks; each source's `<key>.pdf` and `<key>.md` stay local (`.gitignore`: `literature/*` and `!literature/bibliography.json`), because publishers' PDFs and their text cannot be passed on and a committed file stays in the history. Keys are `Surname_Year`, with b and c for a second and third work of the same author and year. The first source added creates the folder and its `.gitignore` lines.
+
+Frozen copies: working documents live in `docs/` without a date in the name; the moment a document is sent to others, a dated copy goes to `archive/` (`nota-progetto_v1_2026-07-14.md`) and is never edited; it is the base for the diff at the next send. A document whose home is Google Drive gets its dated copy in `archive/` at each milestone (a version sent, submitted or approved): a Google Doc exported as Markdown once no suggestion is pending, a Word or Excel file as the file itself, as aldogor-drive describes. Superseded documents and the imported claude.ai history also live in `archive/`.
+
+Development projects take their stack's layout (`src/`, `tests/`, `scripts/`, `docs/`, and the folders the stack itself brings: `public/` and `assets/` on the web, `app/` and `gradle/` on Android), with the research tree, where there is one, under `docs/`.
+
+The names mean the same in every repository, and no repository needs them all. Units of work made of documents (an event, an application, a deliverable) are subfolders of `docs/`; when each unit carries its own code and outputs, they share one plural container in the root (`works/`, `services/`). Code sits at the level of what it serves: `scripts/` with `tests/` for the whole project, inside the unit for a unit, beside the document's assets for one document. A document is born in `docs/`; the root holds the files about the repository and those a tool reads there. Any other top-level folder or document gets one line, in README or CLAUDE.md, saying what it holds: what the project needs is described there, and what nobody can describe is drift. The conventions check of aldogor-handoff reports the folders and root documents that neither file describes.
+
+## Development or research?
+
+Ask explicitly: "Is this a development project or a research project?" A research project that also builds software (analysis pipelines, generators, an app attached to the study) takes the development toolkit; research is the default when the answer is unclear. The answer sets the plugins and the journal, described next, and the git practice written into CLAUDE.md (below), which becomes the shared one as soon as collaborators push to the repository.
+
+Research projects load no development plugins.
+
+Development projects get the toolkit at project scope, installed from the project directory and recorded in its `.claude/settings.json` (commit it):
+
+```
+claude plugin install security-guidance@claude-plugins-official --scope project
+```
+
+plus the language server that matches the stack, read from the files present: `package.json` or `tsconfig.json` means `typescript-lsp`, Python (`pyproject.toml`, `requirements.txt`, `*.py`) means `pyright-lsp`, both when both are there; a web front end also gets `frontend-design`. When the stack cannot be read, as in a new empty codebase, ask which languages the project will use. A language server needs its program on the PATH: check with `typescript-language-server --version` or `pyright-langserver --version`, and when it is missing give the user the one install command (`npm install -g typescript-language-server typescript`, `npm install -g pyright`). The committed settings file enables the plugins and installs nothing: each machine installs them for the folder (these commands, or the trust prompt for a collaborator), and a plugin enabled there with no install for the folder does not load, which the conventions check of aldogor-handoff reports.
+
+Research projects also get `JOURNAL.md`, described next, unless the user says git alone is enough for this one (a small analysis, a single script). Development projects skip it unless the user asks for it (long-lived work with many design decisions or collaborators who do not read git).
+
+## The project journal: JOURNAL.md
+
+Two questions, two tools. Git holds *what changed*, so no CHANGELOG. `JOURNAL.md` holds *why* and *what is open*: a dated, chronological record of verifications made, evidence gathered, decisions with their rationale, ideas discarded, and at its end the one list of what remains open, with each item's state. It lives in the project root next to README.md and CLAUDE.md, because it is a project file, not project content; deliverables live in docs/. Not an ADR set (one file per decision is too rigid for research work), not a journal inside docs/, not a separate task file.
+
+The journal pays off where something human-readable beyond git is needed: research projects, long documents, protocols, work with many methodological decisions, collaborators who do not read git. Where git suffices (small code, scripts, configuration repos) it is not created.
+
+One section per session that verified or decided something, headed by the ISO date (a range when the work spanned days: `## 2026-07-14 / 2026-07-17`). Entries are concise but complete: they carry the data (counts, yields, measurements) and the sources (DOI or URL) that motivate a decision, not a summary of the conversation. Consolidated decisions do not live here but in the project's canonical document (protocol, note, CLAUDE.md): the journal records the intermediate evidence that motivates them and the doubts not yet resolved. Decisions about how the work is organized belong here with their reason; lists of files created, moved or renamed and editorial rules applied do not: the journal is not a changelog.
+
+The journal ends with a single open list, `## Open` (`## Aperto` in Italian projects), kept after the last dated entry and edited in place: every open node and pending task, one line each, with its state (open, in progress, or waits on what unblocks it) and, where useful, a pointer to the section of the canonical document where it closes. The next session's priority comes first. A new entry goes above the list, and ends with one line naming what it opened and what it closed (`Opened: ...; closed: ...`), so the history of the list lives in the entries and the list itself holds only the present. A node closes only when the decision is written in the canonical document and reflected in the linked files (CLAUDE.md, README); it leaves the list in the same edit that records its closing. A fresh session reads the open list.
+
+The journal is written in the project's language, taken from its README or CLAUDE.md, and the labels that other skills look for are fixed per language: `## Open` / `## Aperto`, `open, in progress, waits on` / `aperto, in corso, in attesa di`, `Opened:` / `Aperti:`, `closed:` / `chiusi:`. Header (English shown; the Italian rendering follows the same wording):
+
+```markdown
+# Journal
+
+Dated record of the project's verifications, decisions and open questions. Consolidated decisions live in <canonical document> and in CLAUDE.md; here are the intermediate evidence behind them and the ideas discarded, and at the end the list of what is still open. Git holds what changed.
+```
+
+Italian: `# Journal` with "Registro cronologico delle verifiche, delle decisioni e delle questioni aperte del progetto. Le decisioni consolidate stanno in <documento canonico> e nel CLAUDE.md; qui stanno le evidenze intermedie che le motivano e le idee scartate, e in fondo l'elenco di ciò che resta aperto. Git tiene il cosa è cambiato."
+
+## Project conventions to seed
+
+State these in the project's CLAUDE.md so later sessions and tidy passes find them there:
+
+- A repository kept local on purpose states that it has no remote and is never pushed.
+- The git practice, one line that starts with `Git practice:` (`Pratica git:`) and names the project's kind, which aldogor-handoff applies at every close:
+  - research: all work on `main`, committed as it consolidates;
+  - development: `main` always passes its tests; each feature or fix gets its own branch (or the worktree the desktop app creates), merged into `main` when its tests pass and then deleted, locally and on the remote; a plan of several tasks runs one task at a time, each committed and reported before the next starts;
+  - shared (collaborators may edit the repository): the development practice, with every branch reaching `main` through a pull request that the owner merges.
+  - A journal entry is committed with the work it records, on that work's branch; a change to the journal alone, with no work branch open, goes to `main` in the research and development practices.
+- In a project with a user interface, a change to a screen starts from a list of what the screen does today and ends with the user's walk through the running application against that list. Where screens have their own web addresses and the project has CI, the accessibility checks (axe and pa11y, at 320 px too) run there.
+- Working files carry no date or version number in the name; a dated copy goes to `archive/` when a document is sent to others and is never edited afterwards.
+- For projects with data: `data/raw/` is immutable; processed data is tidy CSV with a codebook; every transformation is a script.
+
+## Project CLAUDE.md
+
+Offer a starter CLAUDE.md with an opening paragraph (what the project is, in two or three sentences) and three sections: where authority lives (which document owns what, one line per authoritative document saying what it holds and when to update it, and one line for each document kept in Google Drive: its link, whether it is a Google file or a Word or Excel file, who edits it), the 3-5 rules easiest to break by accident, and the conventions above. A development project adds its own sections after these (data invariants, code patterns). The file carries no project state, which is the journal's open list, and no inventory of the tree, which is the README's; the user's global rules are restated only in a repository that collaborators work in, since they do not load them. The journal's line reads, in the project's language (adapt the canonical document's name):
+
+```markdown
+- `JOURNAL.md`: dated record of verifications, intermediate decisions and what is open (the *why*; git holds *what changed*). Update it, with the date, in every session that verifies or decides something; its closing "Open" list is the project's state.
+```
+
+Italian: "`JOURNAL.md`: registro datato di verifiche, decisioni intermedie e questioni aperte (il *perché*; git tiene il *cosa è cambiato*). Aggiornarlo a ogni sessione che verifica o decide qualcosa, con la data; l'elenco "Aperto" in fondo è lo stato del progetto."
+
+Keep it lean; facts and invariants, not tutorials. The README's structure tree lists the journal with the same one-line role.
+
+A document lives where its next version is made. A text that colleagues co-write in Google Drive has its home there, and the repository keeps of it only the dated frozen copies in `archive/`; a document built by a script, from the bibliography or by the user's own rewriting keeps its home in the repository and sends Drive a compiled copy of each version. The aldogor-drive skill covers the work inside Drive.
+
+## History from a claude.ai project (optional)
+
+When the project continues work started in a claude.ai Project, its chats and memory block can be distilled into the journal, and its knowledge documents kept in `archive/`, with a chat-export skill run where the claude.ai data export is kept, when the user has one. Offer it once, as a pointer.
+
+## Visibility, decided once
+
+Before the first commit, ask whether the repository may ever become public. Private forever (research, institutional, personal): JOURNAL.md is versioned. Public, or possibly public later: two repositories. `<name>-internal`, private, holds all the work and its whole history, journal included; `<name>`, public, receives only what `publish.txt` at the private root lists, one commit per publication, through the publish script of aldogor-share, into a sibling clone that nobody works in. Each clone's folder carries its GitHub name, as the desktop app's sidebar does: the private repository is cloned in the folder `<name>-internal`, and the public one in the sibling folder `<name>`, which is publish.txt's `target:`. The public repository never receives the private history, and a new file stays private until the list names it. A repository kept local on purpose (identity data, credentials) has no off-machine copy: remind the user that it needs an offline backup, and write that in its README.
+
+## GitHub
+
+Once the first commit exists, ask whether to create the remote, unless the repository is local on purpose: a repository with no remote has no off-machine copy. Private repo with proper metadata, one command plus topics, named `<name>-internal` when the project may become public:
+
+```
+gh repo create <name> --private --source . --push --description "<one sentence: what it is, who it is for>" --disable-wiki
+```
+
+```
+gh repo edit --add-topic <ecosystem> --add-topic <artifact-type> --add-topic <domain>
+```
+
+Convention: every repo gets a one-sentence description, three to six topics (ecosystem, artifact type, domain), wiki disabled unless used.
+
+Putting an existing project in order (names, stale and duplicated documents, grouping) is the work of aldogor-tidy.

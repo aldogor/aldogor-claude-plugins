@@ -1,0 +1,8 @@
+# Vercel uploads only what the function needs: the server, the script it imports, the requirements and the config.
+SKILL.md
+evals/
+references/
+scripts/fixtures/
+scripts/test_legislation.py
+api/test_index.py
+__pycache__/

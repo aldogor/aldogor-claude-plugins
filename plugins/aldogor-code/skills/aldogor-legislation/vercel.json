@@ -1,0 +1,10 @@
+{
+  "regions": ["fra1"],
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "includeFiles": "scripts/legislation.py"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index?vercel_path=$1" }]
+}
