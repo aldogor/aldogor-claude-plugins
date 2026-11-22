@@ -83,6 +83,16 @@ class SecondOpinionTest(unittest.TestCase):
         self.assertEqual(skipped, ["files/deck.pptx"])
         self.assertNotIn("deck.pptx", message)
 
+    def test_a_file_beside_files_is_reported_as_not_sent(self):
+        # On 22 November a packet kept global/ and conventions/ next to files/: they never reached the reviewer,
+        # and the report said nothing was left out.
+        packet = self.run_dir / "packet"
+        (packet / "global").mkdir()
+        (packet / "global" / "rules.md").write_text("Le regole globali.", encoding="utf-8")
+        message, skipped = so.compose_message(packet)
+        self.assertEqual(skipped, ["global/rules.md"])
+        self.assertNotIn("Le regole globali.", message)
+
     def test_run_collects_the_answers_of_reviewers_in_parallel(self):
         reviewers = {
             # Prints the name of its working folder, which must be the packet.

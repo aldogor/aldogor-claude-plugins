@@ -34,7 +34,11 @@ this script changes with them, in the same commit. It reads the repository and c
     reported above;
   - every plugin that .claude/settings.json (or settings.local.json) enables is installed for this folder: the
     settings file enables plugins but installs nothing, and each machine records its installs per folder in
-    ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist).
+    ~/.claude/plugins/installed_plugins.json (skipped where that file does not exist);
+  - git tracks a .gitattributes, which holds `* text=auto` in a new project, so that a file rewritten with other
+    line endings does not show as changed;
+  - the frontmatter of every project skill (.claude/skills/*/SKILL.md) holds no plain one-line value with ": "
+    or " #" in it, which YAML rejects and which drops the skill's description.
 Naming, stale content and the grouping of files are judgments, left to aldogor-tidy.
 
 Usage:
@@ -283,6 +287,42 @@ def plugin_findings(repo: pathlib.Path) -> list[str]:
     return out
 
 
+def gitattributes_findings(repo: pathlib.Path) -> list[str]:
+    """A repository without a tracked .gitattributes: on Windows a file rewritten with CRLF then shows as
+    changed, and "git status clean" stops meaning that nothing changed."""
+    if tracked(repo, ".gitattributes"):
+        return []
+    return ["no .gitattributes tracked: add one holding `* text=auto` and commit it, so that a change of line endings alone does not show as a change"]
+
+
+# A top-level frontmatter key with a plain (unquoted, not block) value on its own line.
+PLAIN_VALUE = re.compile(r"^([A-Za-z][\w-]*):[ \t]+(\S.*)$")
+
+
+def skill_frontmatter_findings(repo: pathlib.Path) -> list[str]:
+    """Project skills whose frontmatter YAML would reject: a plain value holding ": " or " #" (or ending in a
+    colon) ends the value there or starts a comment, and the skill loads without its description.
+
+    Only one-line plain values are read, which is how a description breaks in practice; a quoted value, a
+    `>-` or `|` block and a flow list are left alone. No YAML library is needed."""
+    out = []
+    for path in sorted(repo.glob(".claude/skills/*/SKILL.md")):
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        if not lines or lines[0].strip() != "---":
+            continue
+        for line in lines[1:]:
+            if line.strip() == "---":
+                break
+            m = PLAIN_VALUE.match(line)
+            if not m or m.group(2)[0] in "\"'>|[{&*!":
+                continue
+            value = m.group(2).rstrip()
+            if ": " in value or " #" in value or value.endswith(":"):
+                rel = path.relative_to(repo).as_posix()
+                out.append(f"{rel}: its {m.group(1)} is a plain YAML value holding ': ' or ' #', which breaks the frontmatter: write it as a `>-` block")
+    return out
+
+
 def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False, mirror: bool = False) -> dict:
     """The project's state and the conventions it breaks, as a dict whose "findings" lists one line each.
 
@@ -358,6 +398,8 @@ def check(repo: pathlib.Path, visibility: str | None = None, fetch: bool = False
         f += publication_findings(repo)
         f += layout_findings(repo)
         f += plugin_findings(repo)
+        f += gitattributes_findings(repo)
+        f += skill_frontmatter_findings(repo)
     present = (repo / ARCHIVE).exists()
     archive_tracked = present and bool(tracked(repo, ARCHIVE))
     if visibility == "public" and tracked(repo, "JOURNAL.md", "TODO.md"):

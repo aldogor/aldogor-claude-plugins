@@ -281,11 +281,14 @@ def compose_message(packet: pathlib.Path) -> tuple[str, list[str]]:
     """The message every reviewer receives, and the packet files left out of it.
 
     MESSAGE_HEADER, then prompt.md, context.md (when present) and every file under files/ in path order, each
-    under a heading with its path. A file that does not decode as UTF-8 is left out and listed, so the report can
-    say what the reviewers did not see.
+    under a heading with its path. A file that does not decode as UTF-8 is left out and listed, and so is any
+    other file of the packet (a folder put beside files/ never reaches the reviewers), so the report can say
+    what the reviewers did not see.
     """
     sections, skipped = [], []
     paths = [packet / "prompt.md", packet / "context.md", *sorted(p for p in (packet / "files").rglob("*") if p.is_file())]
+    sent = set(paths)
+    skipped.extend(p.relative_to(packet).as_posix() for p in sorted(packet.rglob("*")) if p.is_file() and p not in sent)
     for path in paths:
         if not path.is_file():
             continue
@@ -371,7 +374,7 @@ def dry_run(run: pathlib.Path, names: list[str], models: dict[str, str], efforts
         argv = rev.build(exe, run / "packet", run / "out" / f"{n}.md", models.get(n, rev.model), efforts.get(n, rev.effort))
         lines.append(f"{n}: (in {run / 'packet'}) {subprocess.list2cmdline(argv)} < message of {len(message)} characters on stdin")
     if skipped:
-        lines.append("not sent (not UTF-8 text): " + ", ".join(skipped))
+        lines.append("not sent (outside files/, or not UTF-8 text): " + ", ".join(skipped))
     return lines
 
 
@@ -476,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
         target, skipped = export_packet(run)
         print(f"{target} ({target.stat().st_size} bytes)")
         if skipped:
-            print("not included (not UTF-8 text): " + ", ".join(skipped))
+            print("not included (outside files/, or not UTF-8 text): " + ", ".join(skipped))
         return 0
     if args.command == "import":
         print(import_answer(run, args.reviewer, pathlib.Path(args.file)))
@@ -490,7 +493,7 @@ def main(argv: list[str] | None = None) -> int:
     for r in report["reviewers"]:
         print(f"{r['reviewer']}: {r['status']}" + (f", {r['seconds']} s" if "seconds" in r else "") + (f", answer in out/{r['answer']}" if r["answer"] else "") + (f" ({r['detail']})" if "detail" in r else ""))
     if report["not_sent"]:
-        print("not sent (not UTF-8 text): " + ", ".join(report["not_sent"]))
+        print("not sent (outside files/, or not UTF-8 text): " + ", ".join(report["not_sent"]))
     changes = report["packet_changes"]
     if any(changes.values()):
         print("packet changed during the run: " + "; ".join(f"{k}: {', '.join(v)}" for k, v in changes.items() if v))
