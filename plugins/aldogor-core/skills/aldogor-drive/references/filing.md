@@ -39,7 +39,7 @@ A folder of papers is reordered in these steps.
 - A boundary between two documents inside one scan is set only after reading the page before it and the page after it.
 - A cut page is compared with its source by image: a text comparison does not see a signature or a stamp.
 - A difference between a cut and its source is looked at with the before and after side by side before it is called harmless.
-- On papers with sensitive content (health, money, identity), a tool prints only dates and words from a closed list, since a line picked by keyword can carry the data itself.
+- On papers with sensitive content (health, money, identity), a tool prints only dates and words from a closed list, since a line picked by keyword can carry the data itself. A whole line of a paper with amounts is printed only through maskings that have been tested and that cover the thousands separator: a masking written on the spot misses the separator, and the thousands digit of an amount passes.
 
 ## Tool limits
 
